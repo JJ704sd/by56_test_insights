@@ -1,0 +1,27 @@
+{
+  "name": "quality-gatekeeper",
+  "version": "0.1.0",
+  "description": "LLM-assisted, evidence-driven quality gates for change risk, regression scope, Agent evaluation, and automation ROI",
+  "author": {
+    "name": "Quality Engineering"
+  },
+  "skills": "./skills/",
+  "interface": {
+    "displayName": "Quality Gatekeeper",
+    "shortDescription": "Evidence-driven test and release gates",
+    "longDescription": "Coordinates four focused QA assistant roles while deterministic MCP tools validate risk coverage, select regression scope, evaluate repeated Agent runs, assess automation ROI, and decide the final release gate.",
+    "developerName": "Quality Engineering",
+    "category": "Productivity",
+    "capabilities": [
+      "Risk review",
+      "Regression selection",
+      "Agent evaluation",
+      "Automation ROI",
+      "Release gating"
+    ],
+    "defaultPrompt": [
+      "Review this change with deterministic risk, regression, Agent evaluation, and release gates."
+    ]
+  },
+  "mcpServers": "./.mcp.json"
+}

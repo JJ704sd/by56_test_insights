@@ -1,0 +1,103 @@
+{
+  "schema_version": "1.0",
+  "catalog_version": "2026.08.11",
+  "automation_policy": {
+    "version": "quote-roi@1",
+    "source_ref": "approved://quality/quote-roi/1",
+    "approval_status": "APPROVED",
+    "max_payback_months": 3,
+    "min_monthly_net_minutes": 30
+  },
+  "tests": [
+    {
+      "id": "AGENT-SMOKE-001",
+      "priority": "CP0",
+      "components": ["quote-agent"],
+      "dimensions": ["business_flow"],
+      "risks": ["billing"],
+      "suites": ["smoke", "core", "full"],
+      "labels": [],
+      "automated": true
+    },
+    {
+      "id": "API-QUOTE-BOUNDARY-001",
+      "priority": "CP0",
+      "components": ["pricing-engine"],
+      "dimensions": ["boundaries", "data_consistency"],
+      "risks": ["billing", "data_consistency"],
+      "suites": ["core", "full"],
+      "labels": ["historical_escape"],
+      "automated": true
+    },
+    {
+      "id": "API-IDEMPOTENCY-001",
+      "priority": "CP0",
+      "components": ["quote-api"],
+      "dimensions": ["side_effects", "data_consistency"],
+      "risks": ["side_effect", "billing"],
+      "suites": ["core", "full"],
+      "labels": [],
+      "automated": true
+    },
+    {
+      "id": "TOOL-TIMEOUT-RECOVERY-001",
+      "priority": "CP1",
+      "components": ["pricing-engine", "quote-agent"],
+      "dimensions": ["exception_paths", "upstream_downstream", "recoverability"],
+      "risks": ["external_dependency"],
+      "suites": ["core", "full"],
+      "labels": [],
+      "automated": false,
+      "automation_fit": {
+        "stable": true,
+        "repeatable": true,
+        "oracle": "state",
+        "runs_per_month": 12,
+        "manual_minutes": 18,
+        "residual_review_minutes_per_run": 3,
+        "maintenance_minutes_per_month": 25,
+        "flaky_investigation_minutes_per_month": 10,
+        "execution_cost_minutes_equivalent_per_month": 5,
+        "data_maintenance_minutes_per_month": 5,
+        "setup_minutes": 300,
+        "data_basis": "ESTIMATED",
+        "observation_window_days": 30
+      }
+    },
+    {
+      "id": "AUTH-TENANT-ISOLATION-001",
+      "priority": "CP0",
+      "components": ["auth-service"],
+      "dimensions": ["permissions"],
+      "risks": ["auth", "privacy"],
+      "suites": ["core", "full"],
+      "labels": [],
+      "automated": true
+    },
+    {
+      "id": "UI-COPY-001",
+      "priority": "CP2",
+      "components": ["quote-web"],
+      "dimensions": ["business_flow"],
+      "risks": [],
+      "suites": ["full"],
+      "labels": [],
+      "automated": false,
+      "automation_fit": {
+        "stable": false,
+        "repeatable": true,
+        "oracle": "semantic",
+        "runs_per_month": 1,
+        "manual_minutes": 3,
+        "residual_review_minutes_per_run": 3,
+        "maintenance_minutes_per_month": 30,
+        "flaky_investigation_minutes_per_month": 15,
+        "execution_cost_minutes_equivalent_per_month": 5,
+        "data_maintenance_minutes_per_month": 5,
+        "setup_minutes": 180,
+        "data_basis": "ESTIMATED",
+        "observation_window_days": 30
+      }
+    }
+  ]
+}

@@ -1,0 +1,63 @@
+{
+  "schema_version": "1.0",
+  "agent_version": "quote-agent@2026.08.11",
+  "dataset_version": "quote-core@3",
+  "evaluation_fingerprint": "sha256:quote-agent-eval-2026-08-11-v1",
+  "execution_profile": {
+    "prompt_version": "quote-prompt@7",
+    "model_id": "configured-by-runner",
+    "model_parameters": {"temperature": 0.2},
+    "toolset_version": "quote-tools@4",
+    "knowledge_snapshot": "quote-kb@2026-08-10",
+    "runner_version": "quality-runner@1"
+  },
+  "threshold_profile": {
+    "version": "quote-thresholds@2",
+    "source_ref": "approved://quality/quote-thresholds/2",
+    "approval_status": "APPROVED"
+  },
+  "cases": [
+    {
+      "id": "AGENT-EXTRACT-001",
+      "risk": "high",
+      "planned_runs": 3,
+      "min_pass_rate": 1.0,
+      "hard_fail_on_any": true,
+      "semantic_review_required": false,
+      "baseline_pass_rate": 1.0,
+      "assertions": [
+        {"type": "equals", "path": "pieces", "expected": 13},
+        {"type": "number", "path": "weight_kg", "expected": 304, "absolute_tolerance": 0},
+        {"type": "number", "path": "volume_cbm", "expected": 2.495, "absolute_tolerance": 0.000001},
+        {"type": "equals", "path": "postal_code", "expected": "92627"}
+      ]
+    },
+    {
+      "id": "AGENT-PRICE-001",
+      "risk": "high",
+      "planned_runs": 3,
+      "min_pass_rate": 1.0,
+      "hard_fail_on_any": true,
+      "semantic_review_required": false,
+      "baseline_pass_rate": 1.0,
+      "assertions": [
+        {"type": "number", "path": "chargeable_weight", "expected": 416.665, "absolute_tolerance": 0.001},
+        {"type": "number", "path": "total_price", "expected": 28996.43, "absolute_tolerance": 0.01},
+        {"type": "required", "paths": ["quote_id", "currency"]}
+      ]
+    },
+    {
+      "id": "AGENT-RECOMMEND-001",
+      "risk": "medium",
+      "planned_runs": 3,
+      "min_pass_rate": 0.666667,
+      "hard_fail_on_any": false,
+      "semantic_review_required": true,
+      "baseline_pass_rate": 0.666667,
+      "assertions": [
+        {"type": "one_of", "path": "product", "values": ["STANDARD", "ECONOMY"]},
+        {"type": "matches", "path": "reason", "pattern": ".+"}
+      ]
+    }
+  ]
+}

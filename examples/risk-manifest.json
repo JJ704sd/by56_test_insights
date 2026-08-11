@@ -1,0 +1,83 @@
+{
+  "schema_version": "1.0",
+  "change_id": "QUOTE-2026-08-11",
+  "version_type": "daily",
+  "changed_components": [
+    "quote-agent"
+  ],
+  "agent_evaluation": {
+    "required": true,
+    "approved_by": "quote-qa-owner",
+    "evidence_ref": "policy://quote-agent/evaluation-required"
+  },
+  "dependencies": {
+    "upstream": [
+      "customer-profile"
+    ],
+    "downstream": [
+      "pricing-engine",
+      "quote-api"
+    ]
+  },
+  "risk_signals": [
+    "billing",
+    "data_consistency",
+    "external_dependency",
+    "side_effect"
+  ],
+  "dimensions": {
+    "business_flow": {
+      "status": "affected",
+      "evidence": "报价 Agent 的工具规划和价格呈现逻辑有变更",
+      "scenarios": [
+        "完整货物信息产生唯一且可追踪的报价"
+      ]
+    },
+    "exception_paths": {
+      "status": "affected",
+      "evidence": "下游价格服务新增超时重试",
+      "scenarios": [
+        "价格服务超时后不重复计费并给出可恢复提示"
+      ]
+    },
+    "boundaries": {
+      "status": "affected",
+      "evidence": "重量与体积归一化逻辑被重构",
+      "scenarios": [
+        "零值、负数、极大值和体积重临界点使用权威规则处理"
+      ]
+    },
+    "permissions": {
+      "status": "not_affected",
+      "reason": "鉴权、租户上下文和工具权限声明均无变更，仍保留核心冒烟"
+    },
+    "data_consistency": {
+      "status": "affected",
+      "evidence": "报价结果同时写入会话记录与报价单",
+      "scenarios": [
+        "部分写入失败时不产生跨表不一致"
+      ]
+    },
+    "upstream_downstream": {
+      "status": "affected",
+      "evidence": "依赖客户画像、价格引擎和报价 API",
+      "scenarios": [
+        "旧版客户画像和价格引擎错误均能被显式处理"
+      ]
+    },
+    "side_effects": {
+      "status": "affected",
+      "evidence": "重试可能重复创建报价单",
+      "scenarios": [
+        "相同幂等键的重试最多生成一张报价单"
+      ]
+    },
+    "recoverability": {
+      "status": "affected",
+      "evidence": "工具超时后允许用户继续补充信息并重试",
+      "scenarios": [
+        "失败恢复后沿用正确上下文且不重复副作用"
+      ]
+    }
+  }
+}
