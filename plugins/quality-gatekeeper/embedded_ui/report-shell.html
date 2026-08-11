@@ -1,0 +1,117 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'none'; style-src 'unsafe-inline'; script-src 'unsafe-inline'; img-src data:; font-src 'none'; connect-src 'none'; frame-src 'none'; object-src 'none'; base-uri 'none'; form-action 'none'">
+  <title>Quality Evidence Inspector</title>
+  <style>
+    :root {
+      color-scheme: light dark;
+      --bg: #f7f8fa;
+      --panel: #ffffff;
+      --text: #18212f;
+      --muted: #526174;
+      --line: #c8d0dc;
+      --accent: #155eef;
+      --pass: #176b3a;
+      --fail: #9b1c1c;
+      --warn: #7a4d00;
+      --blocked: #4b3a82;
+      --soft: #edf2f7;
+      font-family: ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
+    }
+    * { box-sizing: border-box; }
+    body { margin: 0; background: var(--bg); color: var(--text); line-height: 1.45; }
+    button, select, input { font: inherit; }
+    button, select { min-height: 2.5rem; }
+    button { border: 1px solid var(--line); border-radius: .5rem; background: var(--panel); color: var(--text); padding: .5rem .75rem; cursor: pointer; }
+    button.primary { background: var(--accent); border-color: var(--accent); color: #fff; }
+    button:hover { filter: brightness(.96); }
+    button:focus-visible, select:focus-visible, input:focus-visible, [tabindex]:focus-visible { outline: 3px solid #f7b500; outline-offset: 2px; }
+    a { color: var(--accent); }
+    .skip { position: absolute; left: .5rem; top: -5rem; background: var(--panel); padding: .5rem; z-index: 10; }
+    .skip:focus { top: .5rem; }
+    .app { max-width: 82rem; margin: 0 auto; padding: 1rem; }
+    .panel { background: var(--panel); border: 1px solid var(--line); border-radius: .75rem; padding: 1rem; margin-bottom: 1rem; }
+    .inline-card { border-left: .5rem solid var(--line); }
+    .inline-card[data-gate="PASS"] { border-left-color: var(--pass); }
+    .inline-card[data-gate="FAIL"] { border-left-color: var(--fail); }
+    .inline-card[data-gate="BLOCKED"] { border-left-color: var(--blocked); }
+    .inline-card[data-gate="REVIEW_REQUIRED"] { border-left-color: var(--warn); }
+    .topline, .actions, .toolbar, .filters { display: flex; gap: .65rem; flex-wrap: wrap; align-items: center; }
+    .topline { justify-content: space-between; }
+    h1 { font-size: 1.25rem; margin: 0; }
+    h2 { font-size: 1.1rem; margin: 0 0 .75rem; }
+    h3 { font-size: 1rem; }
+    .gate { font-size: 1.75rem; font-weight: 800; letter-spacing: .02em; }
+    .verdict { font-weight: 700; }
+    .status { border: 1px solid currentColor; border-radius: 999px; display: inline-block; padding: .12rem .45rem; font-weight: 700; }
+    .status[data-state="PASS"], .status[data-state="READY"] { color: var(--pass); }
+    .status[data-state="FAIL"] { color: var(--fail); }
+    .status[data-state="BLOCKED"] { color: var(--blocked); }
+    .status[data-state="REVIEW_REQUIRED"], .status[data-state="NOT_APPLICABLE"] { color: var(--warn); }
+    .domains { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: .5rem; margin: .75rem 0; }
+    .domain { background: var(--soft); border-radius: .5rem; padding: .6rem; }
+    .blockers { margin: .5rem 0; padding-left: 1.25rem; }
+    .meta { color: var(--muted); font-size: .82rem; overflow-wrap: anywhere; }
+    .notice { border: 2px solid currentColor; padding: .65rem; margin: .75rem 0; border-radius: .5rem; font-weight: 650; }
+    .notice.invalid { color: var(--fail); }
+    .notice.warning { color: var(--warn); }
+    .full { display: none; }
+    .full[data-open="true"] { display: block; }
+    nav[aria-label="Inspector sections"] { position: sticky; top: 0; z-index: 2; background: var(--bg); padding: .5rem 0; }
+    nav a { margin-right: 1rem; }
+    table { width: 100%; border-collapse: collapse; font-size: .9rem; }
+    caption { text-align: left; font-weight: 700; padding: .35rem 0; }
+    th, td { border-bottom: 1px solid var(--line); text-align: left; vertical-align: top; padding: .55rem .45rem; overflow-wrap: anywhere; }
+    th { background: var(--soft); }
+    .table-wrap { max-width: 100%; overflow-x: auto; }
+    .object-button { width: 100%; text-align: left; border-color: transparent; background: transparent; padding: .25rem; }
+    .object-button[aria-pressed="true"] { border-color: var(--accent); box-shadow: inset .25rem 0 var(--accent); }
+    .split { display: grid; grid-template-columns: minmax(0, 2fr) minmax(17rem, 1fr); gap: 1rem; }
+    .split > * { min-width: 0; }
+    .detail { background: var(--soft); padding: .75rem; border-radius: .5rem; min-height: 8rem; }
+    .failure-grid { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: .5rem; }
+    .failure-grid > div { border: 1px solid var(--line); border-radius: .5rem; padding: .6rem; }
+    .count { display: block; font-size: 1.4rem; font-weight: 800; }
+    .copy-ref { width: 100%; min-height: 2.5rem; border: 1px solid var(--line); border-radius: .4rem; padding: .45rem; background: var(--panel); color: var(--text); }
+    .harness { background: #e6f1ff; border-bottom: 1px solid #9ec5ff; padding: .65rem 1rem; color: #102a43; }
+    .empty { color: var(--muted); font-style: italic; }
+    [hidden] { display: none !important; }
+    @media (prefers-color-scheme: dark) {
+      :root { --bg: #111827; --panel: #1f2937; --text: #f3f4f6; --muted: #cbd5e1; --line: #64748b; --soft: #273449; --accent: #73a5ff; }
+      button.primary { color: #071326; }
+      .harness { background: #18304f; color: #f3f4f6; }
+    }
+    @media (max-width: 48rem) {
+      .domains, .failure-grid, .split { grid-template-columns: 1fr; }
+      .app { padding: .5rem; }
+      th, td { padding: .45rem .3rem; }
+    }
+    @media print {
+      :root { color-scheme: light; --bg: #fff; --panel: #fff; --text: #000; --muted: #333; --line: #777; --soft: #eee; }
+      .actions, .toolbar, .filters, .harness, nav, .skip { display: none !important; }
+      .app { max-width: none; padding: 0; }
+      .panel { break-inside: avoid; border: 1px solid #777; }
+      .full { display: block !important; }
+      body { font-size: 10pt; }
+    }
+  </style>
+</head>
+<body>
+  <!-- QUALITY_HARNESS_DATA -->
+  <a class="skip" href="#main">跳到主要内容</a>
+  <div id="harness" class="harness" hidden></div>
+  <main id="main" class="app" tabindex="-1">
+    <section id="inline" class="panel inline-card" aria-labelledby="report-title">
+      <p role="status">等待 Quality Report…</p>
+    </section>
+    <div id="full" class="full" data-open="false"></div>
+  </main>
+  <noscript><p class="panel">此只读 Inspector 需要 JavaScript；MCP 的结构化结果仍可单独使用。</p></noscript>
+  <script>
+<!-- QUALITY_SCRIPT -->
+  </script>
+</body>
+</html>
