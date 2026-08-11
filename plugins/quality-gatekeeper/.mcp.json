@@ -1,0 +1,8 @@
+{
+  "mcpServers": {
+    "quality-gatekeeper": {
+      "command": "qualityctl-mcp",
+      "args": []
+    }
+  }
+}

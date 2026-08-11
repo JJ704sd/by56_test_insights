@@ -1,0 +1,117 @@
+{
+  "status": "READY",
+  "change_id": "QUOTE-2026-08-11",
+  "version_type": "daily",
+  "risk_check": {
+    "status": "READY",
+    "change_id": "QUOTE-2026-08-11",
+    "version_type": "daily",
+    "errors": [],
+    "warnings": [],
+    "unknown_dimensions": [],
+    "assessed_dimensions": {
+      "business_flow": "affected",
+      "exception_paths": "affected",
+      "boundaries": "affected",
+      "permissions": "not_affected",
+      "data_consistency": "affected",
+      "upstream_downstream": "affected",
+      "side_effects": "affected",
+      "recoverability": "affected"
+    }
+  },
+  "errors": [],
+  "selection_summary": {
+    "catalog_count": 6,
+    "selected_count": 5,
+    "excluded_count": 1,
+    "impacted_components": [
+      "customer-profile",
+      "pricing-engine",
+      "quote-agent",
+      "quote-api"
+    ],
+    "affected_dimensions": [
+      "boundaries",
+      "business_flow",
+      "data_consistency",
+      "exception_paths",
+      "recoverability",
+      "side_effects",
+      "upstream_downstream"
+    ]
+  },
+  "selected": [
+    {
+      "test_id": "AGENT-SMOKE-001",
+      "priority": "CP0",
+      "automated": true,
+      "reasons": [
+        "mandatory smoke",
+        "impacted components: quote-agent",
+        "affected risk dimensions: business_flow",
+        "risk signals: billing",
+        "daily CP0 core"
+      ]
+    },
+    {
+      "test_id": "API-QUOTE-BOUNDARY-001",
+      "priority": "CP0",
+      "automated": true,
+      "reasons": [
+        "impacted components: pricing-engine",
+        "affected risk dimensions: boundaries, data_consistency",
+        "risk signals: billing, data_consistency",
+        "historical escape coverage",
+        "daily CP0 core"
+      ]
+    },
+    {
+      "test_id": "API-IDEMPOTENCY-001",
+      "priority": "CP0",
+      "automated": true,
+      "reasons": [
+        "impacted components: quote-api",
+        "affected risk dimensions: data_consistency, side_effects",
+        "risk signals: billing, side_effect",
+        "daily CP0 core"
+      ]
+    },
+    {
+      "test_id": "TOOL-TIMEOUT-RECOVERY-001",
+      "priority": "CP1",
+      "automated": false,
+      "reasons": [
+        "impacted components: pricing-engine, quote-agent",
+        "affected risk dimensions: exception_paths, recoverability, upstream_downstream",
+        "risk signals: external_dependency"
+      ]
+    },
+    {
+      "test_id": "AUTH-TENANT-ISOLATION-001",
+      "priority": "CP0",
+      "automated": true,
+      "reasons": [
+        "daily CP0 core"
+      ]
+    }
+  ],
+  "excluded": [
+    {
+      "test_id": "UI-COPY-001",
+      "reason": "no version, component, dependency, risk, or history rule matched"
+    }
+  ],
+  "coverage_gaps": [],
+  "automation_review": [
+    {
+      "test_id": "TOOL-TIMEOUT-RECOVERY-001",
+      "decision": "CANDIDATE",
+      "monthly_minutes_saved": 191.0,
+      "reasons": [
+        "stable, repeated, deterministic, and net-positive"
+      ],
+      "payback_months": 1.57
+    }
+  ]
+}

@@ -1,0 +1,18 @@
+{
+  "status": "READY",
+  "change_id": "QUOTE-2026-08-11",
+  "version_type": "daily",
+  "errors": [],
+  "warnings": [],
+  "unknown_dimensions": [],
+  "assessed_dimensions": {
+    "business_flow": "affected",
+    "exception_paths": "affected",
+    "boundaries": "affected",
+    "permissions": "not_affected",
+    "data_consistency": "affected",
+    "upstream_downstream": "affected",
+    "side_effects": "affected",
+    "recoverability": "affected"
+  }
+}

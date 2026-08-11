@@ -1,0 +1,336 @@
+{
+  "gate": "PASS",
+  "agent_version": "quote-agent@2026.08.11",
+  "dataset_version": "quote-core@3",
+  "threshold_profile": {
+    "version": "quote-thresholds@2",
+    "source_ref": "approved://quality/quote-thresholds/2",
+    "approval_status": "APPROVED"
+  },
+  "run_counts": {
+    "planned": 9,
+    "observed": 9,
+    "valid_outputs": 9,
+    "runner_invalid": 0,
+    "technical_failures": 0,
+    "deterministic_failures": 0,
+    "manual_review_failures": 0,
+    "manual_review_missing": 0,
+    "passed": 9
+  },
+  "errors": [],
+  "case_results": [
+    {
+      "case_id": "AGENT-EXTRACT-001",
+      "risk": "high",
+      "status": "PASS",
+      "planned_runs": 3,
+      "observed_runs": 3,
+      "evaluated_attempts": 3,
+      "runner_invalid": 0,
+      "technical_failures": 0,
+      "deterministic_failures": 0,
+      "manual_review_failures": 0,
+      "manual_review_missing": 0,
+      "passed": 3,
+      "pass_rate": 1.0,
+      "wilson_95": [
+        0.438503,
+        1.0
+      ],
+      "min_pass_rate": 1.0,
+      "hard_fail_on_any": true,
+      "baseline_change": {
+        "baseline_pass_rate": 1.0,
+        "percentage_point_change": 0.0,
+        "relative_degradation": 0.0
+      },
+      "errors": [],
+      "runs": [
+        {
+          "run_id": "1",
+          "technical_status": "ok",
+          "assertions": [
+            {
+              "index": 0,
+              "type": "equals",
+              "passed": true,
+              "detail": "pieces: expected 13, got 13"
+            },
+            {
+              "index": 1,
+              "type": "number",
+              "passed": true,
+              "detail": "weight_kg: expected 304 within 0.0, got 304"
+            },
+            {
+              "index": 2,
+              "type": "number",
+              "passed": true,
+              "detail": "volume_cbm: expected 2.495 within 1e-06, got 2.495"
+            },
+            {
+              "index": 3,
+              "type": "equals",
+              "passed": true,
+              "detail": "postal_code: expected '92627', got '92627'"
+            }
+          ],
+          "outcome": "PASS"
+        },
+        {
+          "run_id": "2",
+          "technical_status": "ok",
+          "assertions": [
+            {
+              "index": 0,
+              "type": "equals",
+              "passed": true,
+              "detail": "pieces: expected 13, got 13"
+            },
+            {
+              "index": 1,
+              "type": "number",
+              "passed": true,
+              "detail": "weight_kg: expected 304 within 0.0, got 304"
+            },
+            {
+              "index": 2,
+              "type": "number",
+              "passed": true,
+              "detail": "volume_cbm: expected 2.495 within 1e-06, got 2.495"
+            },
+            {
+              "index": 3,
+              "type": "equals",
+              "passed": true,
+              "detail": "postal_code: expected '92627', got '92627'"
+            }
+          ],
+          "outcome": "PASS"
+        },
+        {
+          "run_id": "3",
+          "technical_status": "ok",
+          "assertions": [
+            {
+              "index": 0,
+              "type": "equals",
+              "passed": true,
+              "detail": "pieces: expected 13, got 13"
+            },
+            {
+              "index": 1,
+              "type": "number",
+              "passed": true,
+              "detail": "weight_kg: expected 304 within 0.0, got 304"
+            },
+            {
+              "index": 2,
+              "type": "number",
+              "passed": true,
+              "detail": "volume_cbm: expected 2.495 within 1e-06, got 2.495"
+            },
+            {
+              "index": 3,
+              "type": "equals",
+              "passed": true,
+              "detail": "postal_code: expected '92627', got '92627'"
+            }
+          ],
+          "outcome": "PASS"
+        }
+      ]
+    },
+    {
+      "case_id": "AGENT-PRICE-001",
+      "risk": "high",
+      "status": "PASS",
+      "planned_runs": 3,
+      "observed_runs": 3,
+      "evaluated_attempts": 3,
+      "runner_invalid": 0,
+      "technical_failures": 0,
+      "deterministic_failures": 0,
+      "manual_review_failures": 0,
+      "manual_review_missing": 0,
+      "passed": 3,
+      "pass_rate": 1.0,
+      "wilson_95": [
+        0.438503,
+        1.0
+      ],
+      "min_pass_rate": 1.0,
+      "hard_fail_on_any": true,
+      "baseline_change": {
+        "baseline_pass_rate": 1.0,
+        "percentage_point_change": 0.0,
+        "relative_degradation": 0.0
+      },
+      "errors": [],
+      "runs": [
+        {
+          "run_id": "1",
+          "technical_status": "ok",
+          "assertions": [
+            {
+              "index": 0,
+              "type": "number",
+              "passed": true,
+              "detail": "chargeable_weight: expected 416.665 within 0.001, got 416.665"
+            },
+            {
+              "index": 1,
+              "type": "number",
+              "passed": true,
+              "detail": "total_price: expected 28996.43 within 0.01, got 28996.43"
+            },
+            {
+              "index": 2,
+              "type": "required",
+              "passed": true,
+              "detail": "required paths present"
+            }
+          ],
+          "outcome": "PASS"
+        },
+        {
+          "run_id": "2",
+          "technical_status": "ok",
+          "assertions": [
+            {
+              "index": 0,
+              "type": "number",
+              "passed": true,
+              "detail": "chargeable_weight: expected 416.665 within 0.001, got 416.665"
+            },
+            {
+              "index": 1,
+              "type": "number",
+              "passed": true,
+              "detail": "total_price: expected 28996.43 within 0.01, got 28996.43"
+            },
+            {
+              "index": 2,
+              "type": "required",
+              "passed": true,
+              "detail": "required paths present"
+            }
+          ],
+          "outcome": "PASS"
+        },
+        {
+          "run_id": "3",
+          "technical_status": "ok",
+          "assertions": [
+            {
+              "index": 0,
+              "type": "number",
+              "passed": true,
+              "detail": "chargeable_weight: expected 416.665 within 0.001, got 416.665"
+            },
+            {
+              "index": 1,
+              "type": "number",
+              "passed": true,
+              "detail": "total_price: expected 28996.43 within 0.01, got 28996.43"
+            },
+            {
+              "index": 2,
+              "type": "required",
+              "passed": true,
+              "detail": "required paths present"
+            }
+          ],
+          "outcome": "PASS"
+        }
+      ]
+    },
+    {
+      "case_id": "AGENT-RECOMMEND-001",
+      "risk": "medium",
+      "status": "PASS",
+      "planned_runs": 3,
+      "observed_runs": 3,
+      "evaluated_attempts": 3,
+      "runner_invalid": 0,
+      "technical_failures": 0,
+      "deterministic_failures": 0,
+      "manual_review_failures": 0,
+      "manual_review_missing": 0,
+      "passed": 3,
+      "pass_rate": 1.0,
+      "wilson_95": [
+        0.438503,
+        1.0
+      ],
+      "min_pass_rate": 0.666667,
+      "hard_fail_on_any": false,
+      "baseline_change": {
+        "baseline_pass_rate": 0.666667,
+        "percentage_point_change": 0.333333,
+        "relative_degradation": -0.499999
+      },
+      "errors": [],
+      "runs": [
+        {
+          "run_id": "1",
+          "technical_status": "ok",
+          "assertions": [
+            {
+              "index": 0,
+              "type": "one_of",
+              "passed": true,
+              "detail": "product: expected one of ['STANDARD', 'ECONOMY'], got 'STANDARD'"
+            },
+            {
+              "index": 1,
+              "type": "matches",
+              "passed": true,
+              "detail": "reason: value '时效与普货属性匹配' does not match '.+'"
+            }
+          ],
+          "outcome": "PASS"
+        },
+        {
+          "run_id": "2",
+          "technical_status": "ok",
+          "assertions": [
+            {
+              "index": 0,
+              "type": "one_of",
+              "passed": true,
+              "detail": "product: expected one of ['STANDARD', 'ECONOMY'], got 'ECONOMY'"
+            },
+            {
+              "index": 1,
+              "type": "matches",
+              "passed": true,
+              "detail": "reason: value '成本更低且满足时效' does not match '.+'"
+            }
+          ],
+          "outcome": "PASS"
+        },
+        {
+          "run_id": "3",
+          "technical_status": "ok",
+          "assertions": [
+            {
+              "index": 0,
+              "type": "one_of",
+              "passed": true,
+              "detail": "product: expected one of ['STANDARD', 'ECONOMY'], got 'STANDARD'"
+            },
+            {
+              "index": 1,
+              "type": "matches",
+              "passed": true,
+              "detail": "reason: value '稳定渠道优先' does not match '.+'"
+            }
+          ],
+          "outcome": "PASS"
+        }
+      ]
+    }
+  ]
+}
