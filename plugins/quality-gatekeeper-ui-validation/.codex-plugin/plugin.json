@@ -1,0 +1,23 @@
+{
+  "name": "quality-gatekeeper-ui-validation",
+  "version": "0.1.0+codex.20260812022538",
+  "description": "Isolated host-validation package for the read-only Quality Evidence Inspector.",
+  "author": {
+    "name": "Quality Gatekeeper validation"
+  },
+  "interface": {
+    "displayName": "Quality Gatekeeper UI Host Validation",
+    "shortDescription": "Validate the read-only Inspector in an isolated local host.",
+    "longDescription": "Host-validation only. Uses synthetic fixtures and never replaces the production five-tool Quality Gatekeeper server.",
+    "developerName": "Quality Gatekeeper validation",
+    "category": "Productivity",
+    "capabilities": [
+      "Read-only",
+      "Interactive"
+    ],
+    "defaultPrompt": [
+      "Inspect synthetic release quality with the host-validation Inspector."
+    ]
+  },
+  "mcpServers": "./.mcp.json"
+}

@@ -1,0 +1,10 @@
+{
+  "mcpServers": {
+    "quality-gatekeeper-host-validation": {
+      "command": "python",
+      "args": [
+        "D:/by56_test_insights/plugins/quality-gatekeeper/embedded_ui/validation/host_validation_server.py"
+      ]
+    }
+  }
+}
