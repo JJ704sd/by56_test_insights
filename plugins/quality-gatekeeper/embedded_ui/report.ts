@@ -31,6 +31,12 @@
   const getContext = () => state.report?.conversation_contexts?.[state.selectedId] ?? null;
   const releaseBasisVerified = (report) =>
     report?.compatibility?.status === "VERIFIED" && report?.integrity?.status === "VALID";
+  const hiddenMeta = (envelope) =>
+    envelope?.mcp_tool_result?._meta ??
+    envelope?.call_tool_result?._meta ??
+    envelope?._meta ??
+    envelope?.result?._meta ??
+    envelope;
 
   function releaseVerdict(report) {
     const verified = releaseBasisVerified(report);
@@ -266,7 +272,7 @@
       return;
     }
     if (message.method !== "ui/notifications/tool-result") return;
-    const meta = message.params?._meta ?? message.params?.result?._meta;
+    const meta = hiddenMeta(message.params);
     const report = meta?.qualityReport;
     if (report) render(report, meta?.componentOnlyCanary ?? null);
   });
@@ -278,7 +284,7 @@
     harness.querySelectorAll("[data-fixture]").forEach((button) => button.addEventListener("click", () => render(fixtures[button.dataset.fixture])));
     render(fixtures.PASS ?? Object.values(fixtures)[0]);
   } else {
-    const resultMeta = window.openai?.toolResponseMetadata;
+    const resultMeta = hiddenMeta(window.openai?.toolResponseMetadata);
     const report = resultMeta?.qualityReport;
     if (report) render(report, resultMeta?.componentOnlyCanary ?? null);
     void rpc("ui/initialize", { clientInfo: { name: "quality-evidence-inspector", version: "1.0.0" } }).catch(() => {});

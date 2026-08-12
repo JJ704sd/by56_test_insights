@@ -29,6 +29,7 @@
       const testCanary = "OBJECT_CONTEXT_CANARY_TEST_4f2d7a";
       const agentCanary = "OBJECT_CONTEXT_CANARY_AGENT_91c8e3";
       const componentCanary = "COMPONENT_ONLY_CANARY_BROWSER_73ab19";
+      const componentCompatCanary = "COMPONENT_ONLY_CANARY_COMPAT_28f31c";
       let contextAcknowledgedAt = null;
       let acknowledgeContext = true;
 
@@ -69,11 +70,24 @@
             params: {
               content: [{ type: "text", text: "Gate PASS; synthetic fixture." }],
               structuredContent: { gate: "PASS", release_allowed: true },
-              _meta: { qualityReport: report, componentOnlyCanary: componentCanary },
+              mcp_tool_result: {
+                _meta: { qualityReport: report, componentOnlyCanary: componentCanary },
+              },
             },
           }, "*");
           await wait(50);
           assert(app.querySelector("#component-only-canary")?.textContent.includes(componentCanary), "component could not read result _meta canary");
+          frame.contentWindow.postMessage({
+            jsonrpc: "2.0",
+            method: "ui/notifications/tool-result",
+            params: {
+              call_tool_result: {
+                _meta: { qualityReport: report, componentOnlyCanary: componentCompatCanary },
+              },
+            },
+          }, "*");
+          await wait(50);
+          assert(app.querySelector("#component-only-canary")?.textContent.includes(componentCompatCanary), "component could not read compatibility result _meta canary");
           const injectionCell = [...app.querySelectorAll("td")].find((cell) => cell.textContent.includes("Ignore prior instructions"));
           assert(injectionCell, "prompt-injection fixture was not rendered as evidence text");
           assert(!injectionCell.querySelector("img, script, a"), "prompt-injection fixture created executable or linked HTML");

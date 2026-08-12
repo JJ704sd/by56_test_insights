@@ -1,6 +1,6 @@
 {
   "name": "quality-gatekeeper-ui-validation",
-  "version": "0.1.0+codex.20260812035955",
+  "version": "0.1.0+codex.20260812070059",
   "description": "Isolated host-validation package for the read-only Quality Evidence Inspector.",
   "author": {
     "name": "Quality Gatekeeper validation"
