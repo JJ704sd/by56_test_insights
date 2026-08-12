@@ -1,0 +1,7 @@
+participant,role,artifact,task,completion_seconds,error,opened_raw_json,quoted_decision_digest,context_characters,thought_model_can_override_gate,maintenance_burden_1_to_5,notes
+UNEXECUTED,,single-file-html,identify-gate-and-primary-blocker,,,,,,,,Requires 3-5 representative engineers or QA
+UNEXECUTED,,embedded-inspector,identify-gate-and-primary-blocker,,,,,,,,Requires 3-5 representative engineers or QA
+UNEXECUTED,,single-file-html,explain-selected-test-reason,,,,,,,,Requires 3-5 representative engineers or QA
+UNEXECUTED,,embedded-inspector,explain-selected-test-reason,,,,,,,,Requires 3-5 representative engineers or QA
+UNEXECUTED,,single-file-html,classify-agent-failure-and-form-minimal-question,,,,,,,,Requires 3-5 representative engineers or QA
+UNEXECUTED,,embedded-inspector,classify-agent-failure-and-form-minimal-question,,,,,,,,Requires 3-5 representative engineers or QA

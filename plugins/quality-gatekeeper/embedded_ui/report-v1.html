@@ -80,7 +80,7 @@
     .empty { color: var(--muted); font-style: italic; }
     [hidden] { display: none !important; }
     @media (prefers-color-scheme: dark) {
-      :root { --bg: #111827; --panel: #1f2937; --text: #f3f4f6; --muted: #cbd5e1; --line: #64748b; --soft: #273449; --accent: #73a5ff; }
+      :root { --bg: #111827; --panel: #1f2937; --text: #f3f4f6; --muted: #cbd5e1; --line: #64748b; --soft: #273449; --accent: #73a5ff; --pass: #6ee7a1; --fail: #fca5a5; --warn: #fcd34d; --blocked: #c4b5fd; }
       button.primary { color: #071326; }
       .harness { background: #18304f; color: #f3f4f6; }
     }
@@ -88,6 +88,9 @@
       .domains, .failure-grid, .split { grid-template-columns: 1fr; }
       .app { padding: .5rem; }
       th, td { padding: .45rem .3rem; }
+    }
+    @media (prefers-reduced-motion: reduce) {
+      *, *::before, *::after { scroll-behavior: auto !important; transition-duration: .01ms !important; animation-duration: .01ms !important; animation-iteration-count: 1 !important; }
     }
     @media print {
       :root { color-scheme: light; --bg: #fff; --panel: #fff; --text: #000; --muted: #333; --line: #777; --soft: #eee; }
@@ -116,8 +119,9 @@
 (() => {
   "use strict";
 
-  const state = { report: null, selectedId: null, full: false };
+  const state = { report: null, selectedId: null, full: false, asking: false, componentCanary: null };
   let requestId = 0;
+  const pendingRequests = new Map();
   const inline = document.querySelector("#inline");
   const full = document.querySelector("#full");
   const harness = document.querySelector("#harness");
@@ -128,9 +132,18 @@
   const array = (value) => Array.isArray(value) ? value : [];
   const number = (value) => Number.isFinite(value) ? value : 0;
   const badge = (value) => `<span class="status" data-state="${esc(value)}">${esc(value)}</span>`;
-  const rpc = (method, params) => {
-    window.parent.postMessage({ jsonrpc: "2.0", id: `qei-${++requestId}`, method, params }, "*");
-  };
+  const rpc = (method, params, timeoutMs = 1500) => new Promise((resolve, reject) => {
+    const id = `qei-${++requestId}`;
+    const timeout = window.setTimeout(() => {
+      pendingRequests.delete(id);
+      reject(new Error(`${method} timed out`));
+    }, timeoutMs);
+    pendingRequests.set(id, {
+      resolve: (value) => { window.clearTimeout(timeout); resolve(value); },
+      reject: (error) => { window.clearTimeout(timeout); reject(error); },
+    });
+    window.parent.postMessage({ jsonrpc: "2.0", id, method, params }, "*");
+  });
   const getContext = () => state.report?.conversation_contexts?.[state.selectedId] ?? null;
 
   function releaseVerdict(report) {
@@ -158,6 +171,7 @@
       : `<p class="empty">无阻塞项。</p>`;
     return `
       <div class="topline"><h1 id="report-title">Quality Gatekeeper</h1><span class="meta">只读证据快照</span></div>
+      ${state.componentCanary ? `<output id="component-only-canary" class="meta">host-validation component canary: ${esc(state.componentCanary)}</output>` : ""}
       ${compatibilityNotice(report)}
       <div class="gate" aria-label="最终 Gate">Gate: ${esc(authority.gate)}</div>
       <p class="verdict">${esc(releaseVerdict(report))} · 原始 release_allowed=${esc(authority.release_allowed)}</p>
@@ -165,7 +179,8 @@
       <h2>首要阻塞项（最多 3 条）</h2>${blockerList}
       <p class="meta">policy ${esc(authority.policy_version)} · schema ${esc(report.contract?.version)} · core ${esc(report.producer?.core_version)}<br>
       evaluation fingerprint ${esc(report.provenance?.evaluation_fingerprint)}<br>decision ${esc(report.snapshot?.decision_digest)}</p>
-      <div class="actions"><button id="open-full" class="primary" type="button">查看证据</button><button id="ask-inline" type="button">询问 Codex</button></div>`;
+      <div class="actions"><button id="open-full" class="primary" type="button">查看证据</button><button id="ask-inline" type="button">询问 Codex</button></div>
+      <p class="meta" data-ask-status role="status"></p>`;
   }
 
   function overviewMarkup(report) {
@@ -234,7 +249,8 @@
       <ul>${array(context.facts).map((fact) => `<li>${esc(fact)}</li>`).join("")}</ul>
       <label for="copy-ref">证据引用</label><input id="copy-ref" class="copy-ref" readonly value="${esc(`${context.decision_digest} ${ref}`)}">
       <p id="copy-help" class="meta">复制按钮不可用时，聚焦引用并按 Ctrl/Cmd+C。</p>
-      <div class="actions"><button id="copy-button" type="button">选择并复制引用</button><button id="ask-selected" class="primary" type="button">用最小上下文询问 Codex</button></div>`;
+      <div class="actions"><button id="copy-button" type="button">选择并复制引用</button><button id="ask-selected" class="primary" type="button">用最小上下文询问 Codex</button></div>
+      <p class="meta" data-ask-status role="status"></p>`;
   }
 
   function fullMarkup(report) {
@@ -268,13 +284,25 @@
     }));
   }
 
-  function askSelected() {
+  function setAskState(asking, message) {
+    state.asking = asking;
+    document.querySelectorAll("#ask-inline, #ask-selected").forEach((button) => { button.disabled = asking; });
+    document.querySelectorAll("[data-ask-status]").forEach((status) => { status.textContent = message; });
+  }
+
+  async function askSelected() {
     const context = getContext();
-    if (!context) return;
-    rpc("ui/update-model-context", { content: [{ type: "text", text: JSON.stringify(context) }] });
+    if (!context || state.asking) return;
     const prompt = `请基于已选择的 ${context.selected.kind} ${context.selected.id}，解释为什么它影响 Gate，并给出下一步最小解阻动作。不要改变或覆盖确定性裁决。`;
-    if (window.openai?.sendFollowUpMessage) window.openai.sendFollowUpMessage({ prompt });
-    else rpc("ui/message", { content: [{ type: "text", text: prompt }] });
+    setAskState(true, "正在向模型发送最小脱敏上下文……");
+    try {
+      await rpc("ui/update-model-context", { content: [{ type: "text", text: JSON.stringify(context) }] });
+      if (window.openai?.sendFollowUpMessage) await window.openai.sendFollowUpMessage({ prompt });
+      else void rpc("ui/message", { content: [{ type: "text", text: prompt }] }).catch(() => {});
+      setAskState(false, "已发送所选对象的最小上下文；确定性 Gate 不会被模型覆盖。");
+    } catch (_) {
+      setAskState(false, "宿主未确认上下文更新；为避免错配，本次询问未发送。");
+    }
   }
 
   function bindDetailActions() {
@@ -316,12 +344,13 @@
     }
   }
 
-  function render(report) {
+  function render(report, componentCanary = null) {
     if (!report?.authority || !report?.snapshot) {
       inline.innerHTML = `<div class="notice invalid" role="alert">无法验证报告契约。请使用结构化 MCP/CLI 结果；不要据此允许发布。</div>`;
       return;
     }
     state.report = report;
+    state.componentCanary = componentCanary;
     state.selectedId = state.selectedId && report.conversation_contexts?.[state.selectedId]
       ? state.selectedId : (report.blockers?.[0]?.object_id ?? report.views?.risk_regression?.dimensions?.[0]?.object_id ?? null);
     inline.dataset.gate = report.authority.gate;
@@ -333,10 +362,21 @@
   }
 
   window.addEventListener("message", (event) => {
+    if (event.source !== window.parent) return;
     const message = event.data;
-    if (message?.jsonrpc !== "2.0" || message?.method !== "ui/notifications/tool-result") return;
-    const report = message.params?._meta?.qualityReport ?? message.params?.result?._meta?.qualityReport;
-    if (report) render(report);
+    if (message?.jsonrpc !== "2.0") return;
+    if (message.id && !message.method) {
+      const pending = pendingRequests.get(message.id);
+      if (!pending) return;
+      pendingRequests.delete(message.id);
+      if (message.error) pending.reject(new Error(message.error.message ?? "Host RPC failed"));
+      else pending.resolve(message.result);
+      return;
+    }
+    if (message.method !== "ui/notifications/tool-result") return;
+    const meta = message.params?._meta ?? message.params?.result?._meta;
+    const report = meta?.qualityReport;
+    if (report) render(report, meta?.componentOnlyCanary ?? null);
   });
 
   const fixtures = window.__QUALITY_HARNESS_FIXTURES__;
@@ -346,9 +386,10 @@
     harness.querySelectorAll("[data-fixture]").forEach((button) => button.addEventListener("click", () => render(fixtures[button.dataset.fixture])));
     render(fixtures.PASS ?? Object.values(fixtures)[0]);
   } else {
-    const report = window.openai?.toolResponseMetadata?.qualityReport;
-    if (report) render(report);
-    rpc("ui/initialize", { clientInfo: { name: "quality-evidence-inspector", version: "1.0.0" } });
+    const resultMeta = window.openai?.toolResponseMetadata;
+    const report = resultMeta?.qualityReport;
+    if (report) render(report, resultMeta?.componentOnlyCanary ?? null);
+    void rpc("ui/initialize", { clientInfo: { name: "quality-evidence-inspector", version: "1.0.0" } }).catch(() => {});
   }
 })();
 

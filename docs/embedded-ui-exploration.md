@@ -1,8 +1,8 @@
 # Quality Gatekeeper 插件内嵌 UI 探索
 
-状态：技术尖峰完成，建议 **Conditional Go**
+状态：宿主验证后仍为 **Conditional Go**；静态 HTML 保持默认
 
-日期：2026-08-11
+日期：2026-08-12
 
 范围：只读、低成本、可对话的 Quality Evidence Inspector；不是通用质量 Dashboard
 
@@ -19,20 +19,20 @@ inspect_release_quality(manifest, catalog, agent_spec?, agent_runs?)
 一次，再通过唯一的 Report View Model adapter 生成模型摘要、组件数据和最小对话上下文。
 现有五个 MCP 工具不绑定 UI、不改变接口，继续独立支持 CLI 和无 UI MCP 客户端。
 
-结论不是直接 Go，原因不是 Python SDK 或协议缺口，而是目标宿主尚未完成真实验收：
+2026-08-12 宿主验证没有推翻该架构，但仍不能直接 Go：
 
-- ChatGPT 官方支持 MCP Apps 的 iframe、`ui/*` bridge、tool-result `_meta` 和
-  fullscreen；本插件尚未通过公开 HTTPS/Streamable HTTP 接入 ChatGPT 实测。
-- OpenAI 的插件目录同时面向 ChatGPT 与 Codex，但官方也明确不同 surface
-  暴露的能力可以不同。当前没有找到 Codex Desktop 对 MCP Apps
-  inline/fullscreen 的同等明确承诺，因此不能把“Codex 能加载插件工具”推断为
-  “Codex 一定能渲染此 UI”。
-- 独立 harness 已验证交互、窄屏和四态，但它不是宿主 bridge 验证。
+- 真实 stdio MCP 与 in-app Browser 已验证 resource/tool/result 契约、四态、390px、
+  同 iframe Fullscreen、resource failure 隔离和双对象最小上下文 bridge 契约。
+- Codex Desktop CLI 在当前 Windows 环境沙箱内外均被拒绝执行，隔离插件无法完成
+  marketplace reinstall/new-task 加载；这是环境阻塞，不是 Inline 渲染失败。
+- ChatGPT 插件目录真实可达但未登录，且没有获批远程 HTTPS/Streamable HTTP endpoint；
+  按约束没有部署或开 tunnel。
+- 没有获得 3–5 名工程师/QA，价值门槛仍未验证，不能用 Agent 自测代替。
 
 因此建议：
 
 1. 保留本次隔离尖峰；不立即接入生产 `.mcp.json`。
-2. 用 2–3 人日完成 Codex Desktop 与 ChatGPT 至少一个目标宿主的真实验收。
+2. 用 3–6 人日完成至少一个目标宿主、人工 a11y 和 3–5 人任务对比。
 3. 只有 inline 稳定、fullscreen 或可接受降级成立、资源失败不影响工具结果、
    且用户测试证明相对静态 HTML 明显缩短证据定位和提问时间，才进入正式实现。
 4. 任一停止条件命中时，对相应宿主 No-Go，继续使用单文件 HTML + headless MCP。
@@ -404,29 +404,27 @@ flowchart TD
 
 ### 10.2 已验证与未验证
 
-| 能力 | 状态 | 证据 / 边界 |
-|---|---|---|
-| Python SDK 注册 `ui://` resource | 已验证 | list/read resource 通过 stdio MCP |
-| `text/html;profile=mcp-app` | 已验证 | descriptor 与读取结果通过 |
-| tool `_meta.ui.resourceUri` | 已验证 | list-tools wire contract |
-| 四个只读 annotations | 已验证 | SDK descriptor contract test |
-| 精确 `outputSchema` + result `_meta` | 已验证 | typed `CallToolResult` 和 smoke |
-| 零网络 CSP metadata | 已验证注册 | 三个 domain allowlist 为空；宿主 enforcement 未抓包 |
-| 原五工具 headless 可用 | 已验证 | 工具名严格等于原五个 |
-| 四态与 core 一致 | 已验证 | examples 派生 fixture 逐状态比对 |
-| 同输入稳定摘要/digest | 已验证 | authority/input digests/decision digest 一致 |
-| resource 失败 fallback | 已验证 | resource path 缺失时工具结构化结果仍为 PASS |
-| 敏感 Agent 值不进入 VM | 已验证 | secret actual、assertion detail、带凭据 URL 均未出现 |
-| 高风险单次失败不被平均 | 已验证 | 独立 warning + hard-fail 行 |
-| standalone 浏览器渲染 | 已验证 | 四态显式文字、Fullscreen、筛选/选择、无 console error |
-| 390px 窄屏 | 已验证 | body 无横向溢出，表格容器内降级 |
-| WCAG AA 对比度抽样 | 已验证 | 实测 5.41–15.23（正文、meta、主按钮、FAIL badge） |
-| 键盘语义结构 | 部分验证 | 原生 button/select、skip link、focus-visible；自动化焦点回报不可靠，需人工 |
-| print stylesheet | 静态验证 | 独立 harness 样式存在；宿主打印未验证 |
-| ChatGPT inline/fullscreen | 官方支持、未跑本插件 | 需要 remote Streamable HTTP + developer mode |
-| Codex Desktop tool | 官方支持插件、现有工具可用 | 本尖峰未安装到生产 plugin manifest |
-| Codex Desktop MCP Apps UI/fullscreen | 未验证 | 官方未找到同等明确承诺；必须真实宿主验收 |
-| 无 UI MCP 客户端 | 已验证 | `content`/`structuredContent` 不依赖 resource |
+| 能力 | Codex Desktop | ChatGPT MCP Apps | 无 UI MCP | Standalone harness |
+|---|---|---|---|---|
+| 列出并调用 Inspector | BLOCKED_BY_ENVIRONMENT | BLOCKED_BY_ENVIRONMENT | VERIFIED | N/A |
+| 加载 `ui://.../v1.html` | BLOCKED_BY_ENVIRONMENT | BLOCKED_BY_ENVIRONMENT | N/A | VERIFIED |
+| Inline Card | BLOCKED_BY_ENVIRONMENT | BLOCKED_BY_ENVIRONMENT | N/A | VERIFIED |
+| Fullscreen request | BLOCKED_BY_ENVIRONMENT | OFFICIALLY_SUPPORTED_NOT_EXECUTED | N/A | PARTIALLY_VERIFIED |
+| tool-result `_meta` | BLOCKED_BY_ENVIRONMENT | OFFICIALLY_SUPPORTED_NOT_EXECUTED | UNSUPPORTED | VERIFIED |
+| `ui/update-model-context` | BLOCKED_BY_ENVIRONMENT | OFFICIALLY_SUPPORTED_NOT_EXECUTED | N/A | VERIFIED |
+| `ui/message` / follow-up | BLOCKED_BY_ENVIRONMENT | OFFICIALLY_SUPPORTED_NOT_EXECUTED | N/A | VERIFIED |
+| widget private state | BLOCKED_BY_ENVIRONMENT | OFFICIALLY_SUPPORTED_NOT_EXECUTED | N/A | VERIFIED |
+| CSP 零网络 | BLOCKED_BY_ENVIRONMENT | OFFICIALLY_SUPPORTED_NOT_EXECUTED | N/A | PARTIALLY_VERIFIED |
+| 资源版本/cache invalidation | BLOCKED_BY_ENVIRONMENT | OFFICIALLY_SUPPORTED_NOT_EXECUTED | N/A | PARTIALLY_VERIFIED |
+| 复制引用 | BLOCKED_BY_ENVIRONMENT | BLOCKED_BY_ENVIRONMENT | N/A | VERIFIED |
+| 打印 | BLOCKED_BY_ENVIRONMENT | BLOCKED_BY_ENVIRONMENT | N/A | PARTIALLY_VERIFIED |
+| 键盘和焦点 | BLOCKED_BY_ENVIRONMENT | BLOCKED_BY_ENVIRONMENT | N/A | PARTIALLY_VERIFIED |
+| 390px/200% zoom | BLOCKED_BY_ENVIRONMENT | BLOCKED_BY_ENVIRONMENT | N/A | PARTIALLY_VERIFIED |
+| resource 失败 fallback | BLOCKED_BY_ENVIRONMENT | BLOCKED_BY_ENVIRONMENT | VERIFIED | PARTIALLY_VERIFIED |
+
+每个状态的复现步骤、证明强度、实际版本和剩余边界见
+[`embedded-ui-host-validation.md`](embedded-ui-host-validation.md)。Standalone 的
+`VERIFIED` 不等于真实 Codex/ChatGPT 宿主验证；官方能力声明也没有替代实际运行。
 
 ChatGPT 使用远程 MCP server 需要可达的 HTTPS endpoint；本仓库当前 `.mcp.json`
 只启动本地 stdio `qualityctl-mcp`，因此“本地尖峰可用”不等于“可在 ChatGPT Web
@@ -490,8 +488,8 @@ UI 长期合同。
 9. 静态 UI：CSP、语义表格、print/narrow CSS、无 fetch/XHR/WebSocket。
 10. wire smoke：stdio list tools/resources、read resource、call tool、组件 `_meta`。
 
-本次结果：**47 项 unittest 全通过**（其中新增 15 项）；production MCP smoke、
-embedded UI stdio smoke 和独立浏览器 harness 均通过。
+最新数量与逐项结果以宿主验证报告和当前测试输出为准；production MCP smoke、
+embedded UI stdio smoke、host contract smoke 和独立浏览器 harness 均通过。
 
 ### 12.2 宿主验收清单（进入正式实现前必须完成）
 
@@ -583,8 +581,8 @@ embedded UI stdio smoke 和独立浏览器 harness 均通过。
 ### 当前：Conditional Go
 
 协议、Python SDK、单一裁决、数据分层、四态和独立 harness 已证明可行；维护成本
-仍可控。继续投入仅限 2–3 人日的真实宿主验收，不扩大到 Dashboard、部署平台或
-生产审批工作流。
+仍可控。继续投入仅限 3–6 人日的真实宿主、人工 a11y 与用户价值验收，不扩大到
+Dashboard、部署平台或生产审批工作流。
 
 ### 转为 Go 的条件
 
@@ -621,11 +619,14 @@ plugins/quality-gatekeeper/embedded_ui/
 ├─ generate_harness.py    # examples -> 四态 fixtures
 ├─ harness.html           # standalone 模拟宿主
 ├─ smoke_test.py          # stdio MCP wire smoke
+├─ validation/            # host contract、v2 marker、failure probe、用户测试模板
 └─ README.md
 
-tests/test_embedded_ui.py # 15 项新增契约/安全/一致性测试
+plugins/quality-gatekeeper-ui-validation/ # 隔离的本地 host-validation plugin
+.agents/plugins/marketplace.json          # repo host-validation marketplace
+tests/test_embedded_ui.py                  # 契约/安全/一致性/host tests
 ```
 
-尖峰没有改动 `src/qualityctl`、现有 plugin manifest、`.mcp.json` 或五个生产工具，
-也没有执行插件重装。这样可以真实验证 SDK/resource/data contract，而不会把未完成的
-宿主能力假设带入当前插件。
+宿主验证没有改动 `src/qualityctl`、生产 plugin manifest、生产 `.mcp.json` 或五个
+生产工具。隔离插件完成 scaffold/validate/cachebuster，但 Codex CLI 被环境拒绝执行，
+因此 reinstall 没有发生；未完成的宿主假设没有带入生产插件。

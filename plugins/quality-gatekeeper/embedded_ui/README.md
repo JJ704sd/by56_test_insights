@@ -15,6 +15,8 @@ Contents:
   existing examples and generates a standalone `harness.html`.
 - `smoke_test.py`: exercises tool metadata, the UI resource, and the PASS call
   over a real stdio MCP session.
+- `validation/`: isolated host contracts, version/cache marker, resource-failure
+  probe, and the unexecuted 3–5-person task-comparison template.
 
 Run the harness generator from the repository root:
 
@@ -32,3 +34,13 @@ python plugins/quality-gatekeeper/embedded_ui/server.py
 The production plugin continues to launch `qualityctl-mcp`, so its existing
 five headless tools are unchanged. This spike is not installed or submitted as
 a production UI.
+
+Run the host-validation protocol contracts:
+
+```powershell
+python plugins/quality-gatekeeper/embedded_ui/validation/run_host_contracts.py
+```
+
+Serve this directory and open `validation/host-contract.html` in the Codex
+in-app Browser to reproduce the component-only canary, private state, minimal
+context ordering, prompt-injection escaping, and follow-up isolation checks.

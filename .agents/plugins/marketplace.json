@@ -1,0 +1,20 @@
+{
+  "name": "quality-gatekeeper-host-validation",
+  "interface": {
+    "displayName": "Quality Gatekeeper Host Validation"
+  },
+  "plugins": [
+    {
+      "name": "quality-gatekeeper-ui-validation",
+      "source": {
+        "source": "local",
+        "path": "./plugins/quality-gatekeeper-ui-validation"
+      },
+      "policy": {
+        "installation": "AVAILABLE",
+        "authentication": "ON_INSTALL"
+      },
+      "category": "Productivity"
+    }
+  ]
+}
