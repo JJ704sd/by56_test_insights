@@ -1,0 +1,93 @@
+{
+  "schema": "quality-gatekeeper.desktop-inline-single-proof.v1",
+  "status": "VERIFIED",
+  "task": {
+    "id": "019ff53f-db64-7f01-93e2-25876ca6c65f",
+    "title": "验证 Inline UI 渲染证据",
+    "state_db_title_match": true,
+    "window": {
+      "hwnd": "0x30A7E",
+      "process_id": 26968,
+      "process_name": "ChatGPT",
+      "title": "ChatGPT"
+    }
+  },
+  "call": {
+    "tool": "inspect_release_quality",
+    "server": "quality-gatekeeper-host-validation",
+    "plugin_id": "quality-gatekeeper-ui-validation@quality-gatekeeper-host-validation",
+    "call_id": "exec-2479f48c-318b-4fcf-aa92-a2e2d4c06612",
+    "started_at_utc": "2026-08-12T09:26:10.363Z",
+    "event_at_utc": "2026-08-12T09:26:10.385Z",
+    "ended_at_utc": "2026-08-12T09:26:10.392Z",
+    "change_id": "INLINE_DIAG_019ff53f_20260812_1733",
+    "decision_digest": "sha256:5523405b3ad4cc744f0fdf954579f65889b94373f6d635ce5b2d32276d22fe93",
+    "gate": "PASS",
+    "release_basis_status": "VERIFIED",
+    "effective_release_allowed": true,
+    "is_error": false,
+    "resource_uri": "ui://quality-gatekeeper/report/v1.html",
+    "result_meta_keys": [
+      "componentOnlyCanary",
+      "qualityReport"
+    ],
+    "component_canary_pattern_ok": true,
+    "component_canary_absent_from_content_and_structured_content": true
+  },
+  "component": {
+    "observed_at_utc": "2026-08-12T09:35:12.6025525Z",
+    "document_name": "Quality Evidence Inspector",
+    "document_descendant_count": 224,
+    "component_canary_automation_id": "component-only-canary",
+    "component_canary_id_count": 1,
+    "decision_digest_text_node_count": 2,
+    "ancestor_chain": [
+      {
+        "automation_id": "component-only-canary",
+        "control_type": "StatusBar"
+      },
+      {
+        "automation_id": "inline",
+        "control_type": "Group",
+        "name": "Quality Gatekeeper"
+      },
+      {
+        "automation_id": "RootWebArea",
+        "control_type": "Document",
+        "name": "Quality Evidence Inspector"
+      },
+      {
+        "automation_id": "RootWebArea",
+        "control_type": "Document",
+        "name": "sandbox"
+      },
+      {
+        "control_type": "Group",
+        "name": "Quality Gatekeeper Host Validation MCP Inspect release quality"
+      },
+      {
+        "automation_id": "RootWebArea",
+        "control_type": "Document",
+        "name": "Codex"
+      }
+    ]
+  },
+  "screenshot": {
+    "path": "single-proof-task-surface.png",
+    "captured_at_utc": "2026-08-12T09:32:46.1523662Z",
+    "width": 1224,
+    "height": 688,
+    "sha256": "C142F8D3C78F7157E2548436A1B7A17069CBEB455A384844CBA93D89D9AF67D2",
+    "shows_task_title": true,
+    "shows_inspector_call": true,
+    "shows_inline_component": true
+  },
+  "gate_checks": {
+    "real_call_succeeded": true,
+    "declared_real_resource_received_by_host": true,
+    "component_iframe_or_dom_rendered": true,
+    "component_only_canary_in_component_dom": true,
+    "canary_absent_from_model_visible_result": true,
+    "task_call_component_and_screenshot_bound": true
+  }
+}
