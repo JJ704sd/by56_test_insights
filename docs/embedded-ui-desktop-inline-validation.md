@@ -107,3 +107,67 @@ and user-value work remain gated on stable, visible Inline evidence.
 
 User-value experiment: participants `0`; status `BLOCKED_BY_ENVIRONMENT`. Agent self-testing was
 not counted as a participant.
+
+## 2026-08-12 Inline-only continuation
+
+Task: `019ff50e-6d38-72b2-9020-945af83539b4` (`验证 Quality Gatekeeper Inline 渲染`)
+
+This continuation kept the same Inline-only gate. It did not change plugin content, the MCP
+contract, the component, or deterministic quality behavior. Fullscreen, bridge, renderer-cache,
+accessibility, and user-value experiments remained out of scope.
+
+### Current official boundary
+
+The current official OpenAI documentation establishes three different levels of support:
+
+- ChatGPT explicitly runs MCP UI resources in an iframe and exposes the MCP Apps bridge plus
+  optional ChatGPT `window.openai` extensions.
+- The open MCP Apps contract can run in compatible hosts, but compatibility is a host capability;
+  it is not evidence that every host renders a component.
+- Codex in the ChatGPT desktop app supports plugins and MCP tools. The plugin architecture also
+  warns that individual capabilities can be surface-specific. The official Codex/Desktop pages
+  do not publish a task-surface DOM inspector, iframe inspector, or DevTools workflow, and do not
+  explicitly guarantee that the Codex task surface renders MCP Apps UI.
+
+Official sources:
+
+- <https://developers.openai.com/plugins/build/chatgpt-ui>
+- <https://developers.openai.com/plugins/concepts/plugins>
+- <https://learn.chatgpt.com/docs/plugins>
+- <https://learn.chatgpt.com/docs/windows/windows-app>
+
+ChatGPT iframe support and generic MCP Apps portability therefore remain useful contract evidence,
+but neither is counted as Codex Desktop Inline evidence.
+
+### Observation -> hypothesis -> experiment evidence graph
+
+| observation | falsifiable hypothesis | one-variable experiment | result |
+|---|---|---|---|
+| The validation Inspector is exposed in this real Desktop task. | The plugin or MCP server is not actually loaded. | Invoke the canonical Inspector once with the unchanged PASS fixture. | Rejected: `isError=false`, Gate `PASS`, verified release basis, effective release allowed, and the stable decision digest were returned. |
+| The real call exposes model-readable `content` and `structuredContent`, but no inspectable component metadata or DOM to this agent. | The installed descriptor/resource is stale, missing, or malformed. | List and read the canonical resource through the task's live MCP server without changing the tool input. | Rejected for the resource path: v1 and v2 are listed with `text/html;profile=mcp-app`, app visibility, empty CSP allowlists, and the canonical v1 HTML contains the component canary DOM plus both official envelope readers. This is resource evidence, not render evidence. |
+| Installed plugin version and workspace source can be confused. | Desktop loaded a different server or UI copy than the reported version. | Compare the installed cache manifest and `.mcp.json` with the live child-process command and workspace resource. | Rejected: installed cache manifest is `0.1.0+codex.20260812070059`; its `.mcp.json` starts the absolute workspace `host_validation_server.py`, which reads the workspace UI resource. |
+| The in-app Browser has no controlled or user-claimable tabs for the Codex task surface. | A rendered component exists and can be inspected through the Browser DOM. | Bind the Codex in-app Browser and enumerate its controlled and open tabs, without opening a standalone page. | Rejected for this inspection path: both lists were empty; the main task surface is not a Browser tab. |
+| The current task is active in the app, while the foreground main window remained on another task. | The supported task navigation API can expose the active task for a bound screenshot/DOM check during the running turn. | Navigate to the exact current task ID, then capture only the ChatGPT/Codex main window. | Not established: two captures still showed the other task, so both were invalid and excluded. After two rounds with no new Inline evidence, retries stopped. |
+
+The remaining leading explanations cannot be distinguished with the current host surface:
+
+1. the Codex task renderer consumes the tool result but does not mount the MCP UI resource; or
+2. a component is mounted, but the running task surface is not exposed to the available Browser,
+   DOM, or reliable task-bound capture interface.
+
+No observed envelope, resource URI, `window.openai`, or `_meta` shape contradicted the component's
+current compatibility contract. Consequently there was no evidence-based contract expansion and
+no regression-fix/TDD cycle.
+
+### Gate result
+
+- Inline: **0/10**
+- Valid Inline denominator: **0**
+- Failure rate: **N/A**
+- Component-only canary in a real Desktop Inline DOM: **NOT_VERIFIED**
+- Minimum host capability gap: a supported way to expose the active Codex task surface for
+  iframe/DOM inspection or a reliable task-bound screenshot that shows the real Inspector call and
+  component together.
+
+The consecutive ten-call denominator remains prohibited until one valid Desktop Inline call is
+visibly and inspectably bound to its component.
