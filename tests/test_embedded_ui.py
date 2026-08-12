@@ -447,6 +447,14 @@ class EmbeddedUiStaticTests(unittest.TestCase):
         self.assertIn("event.source !== window.parent", source)
         self.assertIn("宿主未确认上下文更新", source)
 
+    def test_component_reads_hidden_meta_from_official_tool_response_envelope(self) -> None:
+        source = (EMBEDDED_UI / "report.ts").read_text(encoding="utf-8")
+        probe = (EMBEDDED_UI / "validation" / "host-contract.html").read_text(encoding="utf-8")
+        self.assertIn("mcp_tool_result?._meta", source)
+        self.assertIn("call_tool_result?._meta", source)
+        self.assertIn("COMPONENT_ONLY_CANARY_BROWSER_73ab19", probe)
+        self.assertIn("COMPONENT_ONLY_CANARY_COMPAT_28f31c", probe)
+
     def test_host_contract_probe_uses_two_distinct_object_contexts(self) -> None:
         probe = (EMBEDDED_UI / "validation" / "host-contract.html").read_text(encoding="utf-8")
         self.assertIn("test:API-IDEMPOTENCY-001", probe)
