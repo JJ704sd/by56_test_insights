@@ -70,13 +70,23 @@ class QualityReportViewModelTests(unittest.TestCase):
 
     def test_four_example_derived_states_match_their_labels(self) -> None:
         fixtures = build_fixtures(REPOSITORY_ROOT)
-        self.assertEqual(set(fixtures), {"PASS", "FAIL", "BLOCKED", "REVIEW_REQUIRED"})
-        for expected, report in fixtures.items():
+        states = {"PASS", "FAIL", "BLOCKED", "REVIEW_REQUIRED"}
+        self.assertTrue(states.issubset(fixtures))
+        for expected in states:
+            report = fixtures[expected]
             with self.subTest(expected=expected):
                 self.assertEqual(report["authority"]["gate"], expected)
                 self.assertEqual(
                     report["authority"]["release_allowed"], expected == "PASS"
                 )
+        unsupported = fixtures["UNSUPPORTED_SCHEMA"]
+        self.assertEqual(unsupported["authority"]["gate"], "PASS")
+        self.assertEqual(unsupported["compatibility"]["status"], "UNSUPPORTED")
+        self.assertFalse(
+            next(iter(unsupported["conversation_contexts"].values()))["authority"][
+                "effective_release_allowed"
+            ]
+        )
 
     def test_same_input_has_stable_authority_and_decision_digest(self) -> None:
         first = self.build()
@@ -124,6 +134,30 @@ class QualityReportViewModelTests(unittest.TestCase):
             report = self.build()
         self.assertEqual(report["integrity"]["status"], "INVALID")
         self.assertEqual(view_model.model_summary(report)["release_basis_status"], "NOT_VERIFIED")
+
+    def test_unverified_report_is_fail_closed_in_model_visible_result_and_context(self) -> None:
+        manifest = copy.deepcopy(self.manifest)
+        manifest["schema_version"] = "2.0"
+        result = server.inspect_release_quality(
+            manifest, self.catalog, self.spec, self.runs
+        )
+        summary = result.structured_content
+        report = result.meta["qualityReport"]
+        packet = next(iter(report["conversation_contexts"].values()))
+
+        self.assertEqual(summary["gate"], "PASS")
+        self.assertTrue(summary["release_allowed"])
+        self.assertEqual(summary["release_basis_status"], "NOT_VERIFIED")
+        self.assertFalse(summary["effective_release_allowed"])
+        self.assertIn("release_basis_status=NOT_VERIFIED", result.content[0].text)
+        self.assertIn("effective_release_allowed=false", result.content[0].text)
+        self.assertNotIn("Gate PASS; release_allowed=true", result.content[0].text)
+        self.assertEqual(packet["authority"]["gate"], "PASS")
+        self.assertTrue(packet["authority"]["release_allowed"])
+        self.assertEqual(
+            packet["authority"]["release_basis_status"], "NOT_VERIFIED"
+        )
+        self.assertFalse(packet["authority"]["effective_release_allowed"])
 
     def test_all_integrity_fail_closed_variants_are_not_release_basis(self) -> None:
         valid = {
@@ -418,6 +452,9 @@ class EmbeddedUiStaticTests(unittest.TestCase):
         self.assertIn("test:API-IDEMPOTENCY-001", probe)
         self.assertIn("agent-case:", probe)
         self.assertIn("contextAcknowledgedAt", probe)
+        self.assertIn("UNSUPPORTED_SCHEMA", probe)
+        self.assertIn("bridge timeout kept Inline readable", probe)
+        self.assertIn("fullscreen fallback returned focus", probe)
 
 
 if __name__ == "__main__":

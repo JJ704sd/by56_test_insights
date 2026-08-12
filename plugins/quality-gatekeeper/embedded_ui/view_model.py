@@ -406,6 +406,8 @@ def _context_packet(
     kind: str,
     decision_digest: str,
     authority: Mapping[str, Any],
+    release_basis_status: str,
+    effective_release_allowed: bool,
     facts: list[str],
     source_pointer: str,
 ) -> dict[str, Any]:
@@ -416,6 +418,8 @@ def _context_packet(
         "authority": {
             "gate": authority.get("gate"),
             "release_allowed": authority.get("release_allowed"),
+            "release_basis_status": release_basis_status,
+            "effective_release_allowed": effective_release_allowed,
         },
         "facts": [_text(fact, limit=240) for fact in facts[:8] if _text(fact, limit=240)],
         "safe_refs": [{"source_pointer": source_pointer}],
@@ -435,6 +439,17 @@ def _context_packet(
 def _conversation_contexts(report: dict[str, Any]) -> dict[str, dict[str, Any]]:
     authority = report["authority"]
     decision_digest = report["snapshot"]["decision_digest"]
+    release_basis_status = (
+        "VERIFIED"
+        if report["compatibility"]["status"] == "VERIFIED"
+        and report["integrity"]["status"] == "VALID"
+        else "NOT_VERIFIED"
+    )
+    effective_release_allowed = (
+        release_basis_status == "VERIFIED"
+        and authority.get("gate") == "PASS"
+        and authority.get("release_allowed") is True
+    )
     contexts: dict[str, dict[str, Any]] = {}
     for blocker in report["blockers"]:
         facts = [
@@ -447,6 +462,8 @@ def _conversation_contexts(report: dict[str, Any]) -> dict[str, dict[str, Any]]:
             kind="blocker",
             decision_digest=decision_digest,
             authority=authority,
+            release_basis_status=release_basis_status,
+            effective_release_allowed=effective_release_allowed,
             facts=facts,
             source_pointer=blocker["source_pointer"],
         )
@@ -461,6 +478,8 @@ def _conversation_contexts(report: dict[str, Any]) -> dict[str, dict[str, Any]]:
             kind="risk",
             decision_digest=decision_digest,
             authority=authority,
+            release_basis_status=release_basis_status,
+            effective_release_allowed=effective_release_allowed,
             facts=facts,
             source_pointer=dimension["source_pointer"],
         )
@@ -473,6 +492,8 @@ def _conversation_contexts(report: dict[str, Any]) -> dict[str, dict[str, Any]]:
             kind="test",
             decision_digest=decision_digest,
             authority=authority,
+            release_basis_status=release_basis_status,
+            effective_release_allowed=effective_release_allowed,
             facts=facts,
             source_pointer=test["source_pointer"],
         )
@@ -503,6 +524,8 @@ def _conversation_contexts(report: dict[str, Any]) -> dict[str, dict[str, Any]]:
                 kind="agent_case",
                 decision_digest=decision_digest,
                 authority=authority,
+                release_basis_status=release_basis_status,
+                effective_release_allowed=effective_release_allowed,
                 facts=facts,
                 source_pointer=case["source_pointer"],
             )
@@ -663,6 +686,11 @@ def model_summary(report: Mapping[str, Any]) -> dict[str, Any]:
     compatibility = report["compatibility"]
     integrity = report["integrity"]
     verified = compatibility["status"] == "VERIFIED" and integrity["status"] == "VALID"
+    effective_release_allowed = (
+        verified
+        and authority["gate"] == "PASS"
+        and authority["release_allowed"] is True
+    )
     return {
         "contract_version": report["contract"]["version"],
         "read_only": True,
@@ -673,6 +701,7 @@ def model_summary(report: Mapping[str, Any]) -> dict[str, Any]:
         "gate": authority["gate"],
         "release_allowed": authority["release_allowed"],
         "release_basis_status": "VERIFIED" if verified else "NOT_VERIFIED",
+        "effective_release_allowed": effective_release_allowed,
         "domains": [
             {"name": check["name"], "status": check["status"]}
             for check in authority["checks"]

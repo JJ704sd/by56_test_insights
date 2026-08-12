@@ -264,3 +264,18 @@ python -m http.server 8765 --bind 127.0.0.1 --directory plugins/quality-gatekeep
 - `http://127.0.0.1:8765/validation/host-contract.html`
 
 证据只保留可复现代码/fixture；没有把截图、运行日志、临时部署凭据提交到仓库。
+
+## 17. 2026-08-12 real-host pilot 续验
+
+本轮从 `08e47acc2a4f08b128ed28735499647d7644a648` 建立 `agent/quality-ui-real-host-pilot`，完整记录见 `docs/embedded-ui-real-host-pilot.md`。
+
+新增证据与最小修复：
+
+- 生产 MCP smoke 继续列出五工具并调用 ROI/最终 Gate；本轮没有为增加覆盖而越过允许修改路径；
+- host-validation stdio 覆盖 PASS / FAIL / BLOCKED / REVIEW_REQUIRED / UNSUPPORTED_SCHEMA，资源故障后继续断言 `content`、`structuredContent`、`_meta` 与 digest；
+- Browser host contract 新增 1500ms context ACK timeout、无 Fullscreen API 的同 iframe fallback/焦点返回，以及未知 schema 禁止发送模型上下文；
+- 修复未知 schema raw PASS 被模型可见结果误读为有效放行的问题：保留 raw authority，同时新增 `release_basis_status` 与 `effective_release_allowed`，未验证报告不再允许询问模型。
+
+Codex In-app Browser 的实际 DOM host contract 显示 `PASS`，390×844 无全局横向溢出。Codex Desktop 插件实际安装与 Inline 仍为 `BLOCKED_BY_ENVIRONMENT`：Store 包内签名有效的 bundled `codex.exe` 在当前任务身份下稳定返回 Access denied；未修改 ACL 或绕过系统策略。真实 Desktop 调用为 0/10，失败率 N/A；ChatGPT 仍因无登录确认与 remote endpoint 而阻塞；用户实验参与者 0 人。
+
+因此结论不变：**Conditional Go，但停止视觉扩展，静态 HTML 保持默认。**

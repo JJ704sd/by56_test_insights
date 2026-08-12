@@ -46,7 +46,7 @@ def build_fixtures(repository_root: Path) -> dict[str, dict[str, Any]]:
         "BLOCKED": blocked_runs,
         "REVIEW_REQUIRED": review_runs,
     }
-    return {
+    fixtures = {
         name: build_quality_report_model(
             manifest,
             catalog,
@@ -55,6 +55,15 @@ def build_fixtures(repository_root: Path) -> dict[str, dict[str, Any]]:
         )
         for name, variant_runs in variants.items()
     }
+    unsupported_manifest = deepcopy(manifest)
+    unsupported_manifest["schema_version"] = "2.0"
+    fixtures["UNSUPPORTED_SCHEMA"] = build_quality_report_model(
+        unsupported_manifest,
+        catalog,
+        agent_spec=spec,
+        agent_runs=runs,
+    )
+    return fixtures
 
 
 def main() -> None:

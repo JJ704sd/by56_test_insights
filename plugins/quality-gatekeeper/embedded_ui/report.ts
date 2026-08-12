@@ -29,9 +29,11 @@
     window.parent.postMessage({ jsonrpc: "2.0", id, method, params }, "*");
   });
   const getContext = () => state.report?.conversation_contexts?.[state.selectedId] ?? null;
+  const releaseBasisVerified = (report) =>
+    report?.compatibility?.status === "VERIFIED" && report?.integrity?.status === "VALID";
 
   function releaseVerdict(report) {
-    const verified = report.compatibility?.status === "VERIFIED" && report.integrity?.status === "VALID";
+    const verified = releaseBasisVerified(report);
     if (!verified) return "发布依据未验证（按 fail-closed 处理）";
     return report.authority.release_allowed ? "允许发布" : "不允许发布";
   }
@@ -63,7 +65,7 @@
       <h2>首要阻塞项（最多 3 条）</h2>${blockerList}
       <p class="meta">policy ${esc(authority.policy_version)} · schema ${esc(report.contract?.version)} · core ${esc(report.producer?.core_version)}<br>
       evaluation fingerprint ${esc(report.provenance?.evaluation_fingerprint)}<br>decision ${esc(report.snapshot?.decision_digest)}</p>
-      <div class="actions"><button id="open-full" class="primary" type="button">查看证据</button><button id="ask-inline" type="button">询问 Codex</button></div>
+      <div class="actions"><button id="open-full" class="primary" type="button">查看证据</button><button id="ask-inline" type="button" ${releaseBasisVerified(report) ? "" : "disabled"}>询问 Codex</button></div>
       <p class="meta" data-ask-status role="status"></p>`;
   }
 
@@ -133,7 +135,7 @@
       <ul>${array(context.facts).map((fact) => `<li>${esc(fact)}</li>`).join("")}</ul>
       <label for="copy-ref">证据引用</label><input id="copy-ref" class="copy-ref" readonly value="${esc(`${context.decision_digest} ${ref}`)}">
       <p id="copy-help" class="meta">复制按钮不可用时，聚焦引用并按 Ctrl/Cmd+C。</p>
-      <div class="actions"><button id="copy-button" type="button">选择并复制引用</button><button id="ask-selected" class="primary" type="button">用最小上下文询问 Codex</button></div>
+      <div class="actions"><button id="copy-button" type="button">选择并复制引用</button><button id="ask-selected" class="primary" type="button" ${releaseBasisVerified(state.report) ? "" : "disabled"}>用最小上下文询问 Codex</button></div>
       <p class="meta" data-ask-status role="status"></p>`;
   }
 
@@ -170,13 +172,19 @@
 
   function setAskState(asking, message) {
     state.asking = asking;
-    document.querySelectorAll("#ask-inline, #ask-selected").forEach((button) => { button.disabled = asking; });
+    document.querySelectorAll("#ask-inline, #ask-selected").forEach((button) => {
+      button.disabled = asking || !releaseBasisVerified(state.report);
+    });
     document.querySelectorAll("[data-ask-status]").forEach((status) => { status.textContent = message; });
   }
 
   async function askSelected() {
     const context = getContext();
     if (!context || state.asking) return;
+    if (!releaseBasisVerified(state.report)) {
+      setAskState(false, "发布依据未验证；为避免把原始 Gate 误作放行，本次询问未发送。");
+      return;
+    }
     const prompt = `请基于已选择的 ${context.selected.kind} ${context.selected.id}，解释为什么它影响 Gate，并给出下一步最小解阻动作。不要改变或覆盖确定性裁决。`;
     setAskState(true, "正在向模型发送最小脱敏上下文……");
     try {
