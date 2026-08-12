@@ -17,7 +17,7 @@
   <p>本页模拟宿主的 JSON-RPC acknowledgement，用于验证选择保持本地、最小上下文先确认再 follow-up。</p>
   <output id="result" data-status="RUNNING">RUNNING</output>
   <pre id="evidence"></pre>
-  <iframe id="app" title="Quality Evidence Inspector test app" src="../harness.html?host-contract=2"></iframe>
+  <iframe id="app" title="Quality Evidence Inspector test app" src="../harness.html?host-contract=4"></iframe>
   <script>
     (() => {
       "use strict";
@@ -30,6 +30,7 @@
       const agentCanary = "OBJECT_CONTEXT_CANARY_AGENT_91c8e3";
       const componentCanary = "COMPONENT_ONLY_CANARY_BROWSER_73ab19";
       let contextAcknowledgedAt = null;
+      let acknowledgeContext = true;
 
       const wait = (milliseconds) => new Promise((resolve) => setTimeout(resolve, milliseconds));
       const assert = (condition, message) => {
@@ -41,7 +42,7 @@
         const message = event.data;
         if (!message || message.jsonrpc !== "2.0" || !message.method) return;
         events.push({ method: message.method, at: performance.now(), params: message.params });
-        if (message.method === "ui/update-model-context") {
+        if (message.method === "ui/update-model-context" && acknowledgeContext) {
           setTimeout(() => {
             contextAcknowledgedAt = performance.now();
             event.source.postMessage({ jsonrpc: "2.0", id: message.id, result: {} }, "*");
@@ -78,6 +79,16 @@
           assert(!injectionCell.querySelector("img, script, a"), "prompt-injection fixture created executable or linked HTML");
           assert(frame.contentWindow.__qualityInjected !== true, "prompt-injection fixture executed");
           assert(app.querySelector("#inline").dataset.gate === "PASS", "prompt-injection fixture changed Gate");
+
+          const openFull = app.querySelector("#open-full");
+          openFull.click();
+          await wait(50);
+          assert(app.querySelector("#full").dataset.open === "true", "fullscreen unsupported fallback did not open inline details");
+          assert(app.activeElement?.id === "close-full", "fullscreen fallback did not move focus to close control");
+          app.querySelector("#close-full").click();
+          await wait(50);
+          assert(app.querySelector("#full").dataset.open === "false", "fullscreen fallback did not close inline details");
+          assert(app.activeElement?.id === "open-full", "fullscreen fallback returned focus to wrong control");
 
           const selection = app.querySelector('[data-object-id="test:API-IDEMPOTENCY-001"]');
           assert(selection, "selected-test control was not rendered");
@@ -126,9 +137,32 @@
           assert(agentPacket.selected.id === "agent-case:AGENT-EXTRACT-001", "wrong Agent context was sent");
           assert(JSON.stringify(agentPacket).includes(agentCanary), "selected Agent canary was not sent");
           assert(!JSON.stringify(agentPacket).includes(testCanary), "test canary leaked into Agent context");
+
+          acknowledgeContext = false;
+          app.querySelector("#ask-selected").click();
+          await wait(1650);
+          assert(events.filter((item) => item.method === "ui/message").length === 2, "bridge timeout sent a follow-up without context acknowledgement");
+          assert(app.querySelector("[data-ask-status]")?.textContent.includes("宿主未确认上下文更新"), "bridge timeout did not expose fail-closed status");
+          assert(app.querySelector("#inline").dataset.gate === "PASS", "bridge timeout changed Inline Gate");
+
+          const unsupported = frame.contentWindow.__QUALITY_HARNESS_FIXTURES__.UNSUPPORTED_SCHEMA;
+          assert(unsupported, "UNSUPPORTED_SCHEMA fixture missing");
+          frame.contentWindow.postMessage({
+            jsonrpc: "2.0",
+            method: "ui/notifications/tool-result",
+            params: { _meta: { qualityReport: unsupported } },
+          }, "*");
+          await wait(50);
+          assert(app.querySelector(".notice.invalid"), "unsupported schema did not render a fail-closed alert");
+          assert(!app.querySelector(".verdict")?.textContent.startsWith("允许发布"), "unsupported schema rendered a valid release verdict");
+          assert(app.querySelector("#ask-inline")?.disabled === true, "unsupported schema still allowed model context updates");
           output.dataset.status = "PASS";
           output.textContent = "PASS";
-          evidence.textContent = JSON.stringify({ events, selected: [packet.selected, agentPacket.selected] }, null, 2);
+          evidence.textContent = JSON.stringify({
+            events,
+            selected: [packet.selected, agentPacket.selected],
+            checks: ["fullscreen fallback returned focus", "bridge timeout kept Inline readable", "UNSUPPORTED_SCHEMA fail-closed"],
+          }, null, 2);
         } catch (error) {
           output.dataset.status = "FAIL";
           output.textContent = `FAIL: ${error.message}`;

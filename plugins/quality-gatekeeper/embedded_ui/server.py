@@ -39,6 +39,7 @@ class QualityReportModelSummary(TypedDict):
     gate: str
     release_allowed: bool
     release_basis_status: str
+    effective_release_allowed: bool
     domains: list[DomainSummary]
     blockers: list[BlockerSummary]
     versions: dict[str, Any]
@@ -129,9 +130,22 @@ def inspect_release_quality(
         f"{item['domain']} {item['status']}: {item['summary']}"
         for item in summary["blockers"]
     ) or "none"
+    if summary["release_basis_status"] == "VERIFIED":
+        decision = (
+            f"Gate {summary['gate']}; "
+            f"raw_release_allowed={str(summary['release_allowed']).lower()}; "
+            "release_basis_status=VERIFIED; "
+            f"effective_release_allowed={str(summary['effective_release_allowed']).lower()}"
+        )
+    else:
+        decision = (
+            "Release basis is not verified and must not authorize release; "
+            "release_basis_status=NOT_VERIFIED; effective_release_allowed=false; "
+            f"raw_gate={summary['gate']}; "
+            f"raw_release_allowed={str(summary['release_allowed']).lower()}"
+        )
     text = (
-        f"Gate {summary['gate']}; release_allowed={str(summary['release_allowed']).lower()}; "
-        f"domains: {domains}; blockers: {blockers}; "
+        f"{decision}; domains: {domains}; blockers: {blockers}; "
         f"decision_digest={summary['decision_digest']}. "
         "This result is read-only and cannot approve, waive, or release."
     )
