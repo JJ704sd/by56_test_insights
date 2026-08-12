@@ -4,7 +4,7 @@ Date: 2026-08-12
 
 Branch: `agent/quality-ui-desktop-inline-validation`
 
-Status: **BLOCKED_BY_ENVIRONMENT for Inline; stop visual expansion**
+Status: **single-proof Inline VERIFIED; ten-run stability gate incomplete; stop visual expansion**
 
 This report supersedes only the current-state claims in the historical
 `embedded-ui-real-host-pilot.md`. The earlier pilot remains an accurate record of that run.
@@ -171,3 +171,97 @@ no regression-fix/TDD cycle.
 
 The consecutive ten-call denominator remains prohibited until one valid Desktop Inline call is
 visibly and inspectably bound to its component.
+
+## 2026-08-12 task-surface observability resolution
+
+This section supersedes the current-state Inline conclusion above. It does not reinterpret any
+historical tool-only call or invalid screenshot as Inline success.
+
+### Root cause and minimum operational fix
+
+The plugin, installed descriptor, server, resource, and result envelope were not the cause. The
+actual blockers were the observation path and the host-turn shape:
+
+- the in-app Browser exposed no controlled or user tabs for the Codex task surface;
+- the Windows foreground window was WeChat while the Codex main window was minimized to a
+  `160x28` shell, so foreground and off-screen captures initially had no task DOM;
+- the task database bound `019ff53f-db64-7f01-93e2-25876ca6c65f` to the selected title
+  `验证 Inline UI 渲染证据`, while the real Codex window was HWND `0x30A7E`, PID `26968`;
+- restoring and activating that exact HWND, then inspecting its Windows UI Automation tree,
+  exposed the real sandbox document, component document, Inspector group, digest, and canary;
+- ten nested Inspector calls inside one outer `exec` host turn were coalesced into one observable
+  component document. A stable Inline denominator therefore requires one Inspector call per outer
+  host turn and observation before the next tool event can virtualize the component.
+
+No descriptor, resource URI, envelope, `window.openai`, or `_meta` mismatch was observed. No
+plugin-creator, evolving-contracts, or TDD repair was justified, and no plugin or component source
+was changed.
+
+### Official capability matrix
+
+| capability | ChatGPT published support | generic MCP Apps | Codex Desktop published support | local observation |
+|---|---|---|---|---|
+| MCP UI resource and Inline iframe | Explicitly documented | Defined for compatible MCP Apps hosts | Public Codex/Desktop docs do not establish this task-surface capability | VERIFIED for this task |
+| `window.openai` extensions | Explicitly documented as ChatGPT host extensions | Not portable core | Public docs do not establish it for Codex Desktop | NOT_INSPECTED |
+| tool-result component `_meta` | Component-only result metadata documented | Portable result metadata | Public docs do not establish renderer behavior | VERIFIED in the raw event and component DOM |
+| task-surface screenshot/appshot | Not an MCP Apps contract | Not an MCP Apps contract | Public docs do not establish a Codex task appshot API | VERIFIED through task-bound Windows capture, not Browser |
+| task DOM/iframe inspection | Browser tooling is documented for web pages and local web apps | Host-specific | Public docs do not establish Codex task DevTools/DOM inspection | Browser unavailable; Windows UI Automation VERIFIED |
+| component load telemetry | Host implementation detail | Host-specific | Public docs do not establish it | Resource URI in task event plus rendered component ancestry VERIFIED |
+
+Official sources:
+
+- <https://developers.openai.com/plugins/build/chatgpt-ui>
+- <https://learn.chatgpt.com/docs/plugins>
+- <https://learn.chatgpt.com/docs/extend/mcp>
+- <https://learn.chatgpt.com/docs/browser>
+- <https://learn.chatgpt.com/docs/windows/windows-app>
+
+Absence from the public Codex/Desktop documentation is recorded only as “public docs do not
+establish this capability”; it is not treated as proof that the product cannot support it.
+
+### Strict single-proof result
+
+The single-proof gate is **VERIFIED**:
+
+1. task `019ff53f-db64-7f01-93e2-25876ca6c65f` completed the real
+   `inspect_release_quality` call `exec-2479f48c-318b-4fcf-aa92-a2e2d4c06612` at
+   `09:26:10.385Z` with Gate `PASS` and no tool error;
+2. the task event declared `ui://quality-gatekeeper/report/v1.html` and preserved hidden result
+   `_meta` keys `componentOnlyCanary` and `qualityReport`;
+3. the task window rendered a nested sandbox document and `Quality Evidence Inspector` component
+   under `Quality Gatekeeper Host Validation MCP Inspect release quality`;
+4. that component contained exactly one `AutomationId=component-only-canary` node;
+5. the raw canary matched the expected pattern and was absent from serialized `content` plus
+   `structuredContent`;
+6. the same component contained the call decision digest
+   `sha256:5523405b3ad4cc744f0fdf954579f65889b94373f6d635ce5b2d32276d22fe93`, and task ID,
+   title, HWND, PID, timestamps, call ID, screenshot hash, resource URI, DOM ancestry, digest, and
+   canary check are recorded together.
+
+Evidence:
+
+- [task-surface screenshot](evidence/desktop-inline-20260812/single-proof-task-surface.png)
+- [single-proof task/call/DOM record](evidence/desktop-inline-20260812/single-proof.json)
+- [configuration freeze and stability attempt](evidence/desktop-inline-20260812/stability-attempt.json)
+
+### Stability result
+
+The frozen configuration is recorded at `09:36:09.5159886Z`. Ten fixed-input Inspector calls all
+succeeded with ten distinct call IDs, the same digest, the expected resource URI, hidden canary,
+and no model-visible canary. They are **not** counted as ten Inline successes because they were
+nested in one outer host turn and produced only one bindable component document.
+
+A subsequent one-call-per-host-turn probe produced one fully bound new component RuntimeId. A
+later call had no matching component in its probe, but that negative observation did not retain a
+simultaneous task-title or activation binding and is therefore excluded instead of being called an
+Inline failure. This is not a completed ten-run gate. Consequently:
+
+- single-proof Inline: **1/1 VERIFIED**;
+- consecutive ten-run Inline stability: **INCOMPLETE**;
+- completed ten-run denominator: **not established**;
+- valid independent-turn denominator: **1**, success **1**, provisional failure rate **0%**;
+- excluded unbound negative observations: **1**;
+- tool-only batch: **10/10**, excluded from the Inline denominator.
+
+Visual expansion, Fullscreen, real bridge expansion, renderer-cache work, accessibility
+experiments, and user-value experiments remain stopped.

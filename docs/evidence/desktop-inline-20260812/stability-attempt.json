@@ -1,0 +1,62 @@
+{
+  "schema": "quality-gatekeeper.desktop-inline-stability-attempt.v1",
+  "status": "INCOMPLETE_NOT_A_TEN_RUN_INLINE_DENOMINATOR",
+  "task_id": "019ff53f-db64-7f01-93e2-25876ca6c65f",
+  "configuration_frozen_at_utc": "2026-08-12T09:36:09.5159886Z",
+  "configuration": {
+    "git_head": "fc7092d6f7ba040a0599244758683aefa16759b2",
+    "branch": "agent/quality-ui-desktop-inline-validation",
+    "desktop_version": "26.803.10989.0",
+    "plugin_version": "0.1.0+codex.20260812070059",
+    "installed_manifest_sha256": "53AC4279CB934D4D050635DA6A83827251D2B3554389E25209F98824CF91E224",
+    "installed_mcp_config_sha256": "C3FA2853E8EE6F63125301E6B8E592BCB396C38BD11CD5B389C1DD454B827FF3",
+    "workspace_server_sha256": "CAA5B366910E328DF91B990E2C1A7A38F53F5BD6DCCA350AE4192B809417EA12",
+    "workspace_ui_v1_sha256": "4532248634A667847A9702A16730C591ED1217A69F39076103159728183E0FB2",
+    "risk_manifest_sha256": "7A54D5032E6BDAFE5696AC7F20E18AAD5A75043761421BE15AFDFE9322A96723",
+    "test_catalog_sha256": "E08E73D09959E68391F7B172DCFC62E1226F7247CE56F0B39971DA6976164A6D",
+    "agent_cases_sha256": "DADD02A787CD3E3DB09FBAB8E537BE7C2D56F6E971FDE510E5890B61C1B802E6",
+    "agent_runs_sha256": "DCD9745AC0E54D75871BCA0551D9E2F9AF96C46AC91CE95B0129FADA764BE5F4"
+  },
+  "batched_tool_only_attempt": {
+    "fixed_change_id": "INLINE_STABILITY_019ff53f_FIXED_20260812",
+    "call_count": 10,
+    "unique_call_id_count": 10,
+    "first_event_at_utc": "2026-08-12T09:36:33.894Z",
+    "last_event_at_utc": "2026-08-12T09:36:34.106Z",
+    "all_calls_succeeded": true,
+    "stable_decision_digest": "sha256:1bdf1b074456d4c259a1a11742923fd7277792fb8643996b817b929cd9d1ef8f",
+    "all_events_declared_resource_uri": "ui://quality-gatekeeper/report/v1.html",
+    "all_events_had_hidden_component_canary": true,
+    "all_canaries_absent_from_model_visible_results": true,
+    "component_documents_observed_after_activation": 1,
+    "counted_as_inline_denominator": false,
+    "reason_not_counted": "Ten nested Inspector calls inside one outer exec host turn were represented by one rendered component document, so the document could not be bound one-to-one to ten calls."
+  },
+  "independent_turn_probe": {
+    "fixed_change_id": "INLINE_DENOMINATOR_019ff53f_FIXED_20260812",
+    "decision_digest": "sha256:8ce325c496759a8f6e46df0ecebdfebe54563ac55265732135a833e10a1e5650",
+    "valid_success": {
+      "call_id": "exec-d59120a8-3c81-4094-88e1-525c43727161",
+      "call_event_at_utc": "2026-08-12T09:41:12.050Z",
+      "component_observed_at_utc": "2026-08-12T09:42:03.2630566Z",
+      "component_runtime_id": "42.330360.4.90.1.332",
+      "component_canary_id_count": 1,
+      "decision_digest_text_node_count": 1,
+      "counted": true
+    },
+    "excluded_attempt": {
+      "call_id": "exec-8b8bfd36-a2f2-4362-86b1-442adf18d40b",
+      "call_event_at_utc": "2026-08-12T09:42:16.280Z",
+      "component_observed": false,
+      "counted": false,
+      "status": "INVALID_OBSERVATION_EXCLUDED_FROM_DENOMINATOR",
+      "reason": "The probe did not retain a simultaneous task-title or activation binding when no component document was found, so the absence cannot be classified as an Inline failure."
+    },
+    "valid_inline_denominator": 1,
+    "valid_inline_successes": 1,
+    "excluded_observations": 1,
+    "provisional_failure_rate_over_valid_denominator": 0.0,
+    "ten_run_gate_complete": false
+  },
+  "next_safe_method": "Keep the exact task window active before each call, execute one Inspector call per outer host turn, and capture each new component RuntimeId with an independent UI Automation observer before the next task tool event can virtualize it."
+}
