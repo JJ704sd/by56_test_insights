@@ -8,6 +8,7 @@ from qualityctl.risk import RISK_DIMENSIONS, validate_risk_manifest
 
 def complete_manifest() -> dict:
     return {
+        "schema_version": "1.0",
         "change_id": "C-1",
         "version_type": "daily",
         "changed_components": ["api"],
@@ -54,7 +55,9 @@ class RiskManifestTests(unittest.TestCase):
         manifest["dimensions"]["boundaries"] = {"status": "affected"}
         result = validate_risk_manifest(manifest)
         self.assertEqual(result["status"], "BLOCKED")
-        self.assertGreaterEqual(len(result["errors"]), 2)
+        joined = " ".join(result["errors"])
+        self.assertIn("evidence", joined)
+        self.assertIn("scenarios", joined)
 
 
 if __name__ == "__main__":

@@ -18,6 +18,7 @@ def manifest() -> dict:
         "scenarios": ["retry stays idempotent"],
     }
     return {
+        "schema_version": "1.0",
         "change_id": "C-1",
         "version_type": "daily",
         "changed_components": ["orders"],
@@ -34,6 +35,7 @@ def manifest() -> dict:
 
 def catalog() -> dict:
     return {
+        "schema_version": "1.0",
         "automation_policy": {
             "version": "roi-v1",
             "source_ref": "approved://roi-v1",

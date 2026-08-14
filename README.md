@@ -12,6 +12,8 @@ LLM 插件 MVP 见 [插件 MVP Spec](docs/plugin-mvp-spec.md)，后续维护先�
 - `select`：依据版本类型、变更组件、上下游、风险维度和历史逃逸选择最小有效回归集，并识别值得自动化的人工用例。
 - `agent-eval`：聚合 Agent 多次运行，分离 runner 无效、技术失败、确定性断言失败和人工语义复核，输出 Wilson 置信区间与门禁结论。
 
+三类入参（manifest / catalog / agent_spec）与每条 Agent run 都有版本化 JSON Schema 与 Pydantic v2 校验器，详见 [`docs/schemas/v1/README.md`](docs/schemas/v1/README.md)。MCP 工具与 CLI 子命令均在边界先做结构校验，非 `ok` 时返回结构化错误。CI 流水线见 `.github/workflows/python-qualityctl.yml`（windows-latest + Python 3.11 + 单元测试 + MCP stdio smoke）。
+
 ## 快速开始
 
 规则核心使用 Python 3.10+；LLM 插件通过官方 Python MCP SDK 暴露工具。先安装：

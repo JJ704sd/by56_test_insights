@@ -9,6 +9,7 @@ from qualityctl.risk import RISK_DIMENSIONS
 
 def manifest() -> dict:
     return {
+        "schema_version": "1.0",
         "change_id": "C-GATE-1",
         "version_type": "daily",
         "changed_components": ["orders"],
@@ -28,6 +29,7 @@ def manifest() -> dict:
 
 def catalog() -> dict:
     return {
+        "schema_version": "1.0",
         "tests": [
             {
                 "id": "SMOKE",
@@ -83,6 +85,7 @@ class QualityGateTests(unittest.TestCase):
 
     def test_agent_failure_cannot_be_voted_away(self) -> None:
         spec = {
+            "schema_version": "1.0",
             "agent_version": "a1",
             "dataset_version": "d1",
             "evaluation_fingerprint": "sha256:gate-fixture-v1",

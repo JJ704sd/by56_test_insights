@@ -1,0 +1,30 @@
+{
+  "schema_version": "1.0",
+  "agent_version": "a",
+  "dataset_version": "d",
+  "evaluation_fingerprint": "f",
+  "execution_profile": {
+    "prompt_version": "p",
+    "model_id": "m",
+    "model_parameters": {"temperature": 0},
+    "toolset_version": "t",
+    "knowledge_snapshot": "k",
+    "runner_version": "r"
+  },
+  "threshold_profile": {
+    "version": "v",
+    "source_ref": "approved://v",
+    "approval_status": "APPROVED"
+  },
+  "cases": [
+    {
+      "id": "C1",
+      "risk": "high",
+      "planned_runs": 3,
+      "min_pass_rate": 1.0,
+      "assertions": [
+        {"type": "matches", "path": "x", "pattern": "["}
+      ]
+    }
+  ]
+}

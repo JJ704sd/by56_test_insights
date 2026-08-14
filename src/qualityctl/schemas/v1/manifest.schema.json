@@ -1,0 +1,112 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://qualityctl.dev/schemas/v1/manifest.schema.json",
+  "title": "Quality Gatekeeper Manifest v1.0",
+  "description": "Change-risk manifest consumed by validate_change_risks and decide_release_gate. Mirrored by qualityctl.validation.ManifestV1.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version",
+    "change_id",
+    "version_type",
+    "changed_components",
+    "agent_evaluation",
+    "dependencies",
+    "risk_signals",
+    "dimensions"
+  ],
+  "properties": {
+    "schema_version": {
+      "type": "string",
+      "minLength": 1
+    },
+    "change_id": {
+      "type": "string",
+      "minLength": 1
+    },
+    "version_type": {
+      "type": "string",
+      "enum": ["daily", "hotfix", "major"]
+    },
+    "changed_components": {
+      "type": "array",
+      "minItems": 1,
+      "items": { "type": "string", "minLength": 1 }
+    },
+    "agent_evaluation": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["required", "approved_by", "evidence_ref"],
+      "properties": {
+        "required": { "type": "boolean" },
+        "approved_by": { "type": "string", "minLength": 1 },
+        "evidence_ref": { "type": "string", "minLength": 1 }
+      }
+    },
+    "dependencies": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["upstream", "downstream"],
+      "properties": {
+        "upstream": {
+          "type": "array",
+          "items": { "type": "string" }
+        },
+        "downstream": {
+          "type": "array",
+          "items": { "type": "string" }
+        }
+      }
+    },
+    "risk_signals": {
+      "type": "array",
+      "items": { "type": "string", "minLength": 1 }
+    },
+    "dimensions": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "business_flow",
+        "exception_paths",
+        "boundaries",
+        "permissions",
+        "data_consistency",
+        "upstream_downstream",
+        "side_effects",
+        "recoverability"
+      ],
+      "properties": {
+        "business_flow": { "$ref": "#/$defs/dimension_entry" },
+        "exception_paths": { "$ref": "#/$defs/dimension_entry" },
+        "boundaries": { "$ref": "#/$defs/dimension_entry" },
+        "permissions": { "$ref": "#/$defs/dimension_entry" },
+        "data_consistency": { "$ref": "#/$defs/dimension_entry" },
+        "upstream_downstream": { "$ref": "#/$defs/dimension_entry" },
+        "side_effects": { "$ref": "#/$defs/dimension_entry" },
+        "recoverability": { "$ref": "#/$defs/dimension_entry" }
+      }
+    }
+  },
+  "$defs": {
+    "dimension_entry": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["status"],
+      "properties": {
+        "status": {
+          "type": "string",
+          "enum": ["affected", "not_affected", "not_applicable", "unknown"]
+        },
+        "evidence": { "type": "string", "minLength": 1 },
+        "scenarios": {
+          "type": "array",
+          "minItems": 1,
+          "items": { "type": "string", "minLength": 1 }
+        },
+        "reason": { "type": "string", "minLength": 1 },
+        "owner": { "type": "string", "minLength": 1 },
+        "resolve_by": { "type": "string", "minLength": 1 }
+      }
+    }
+  }
+}

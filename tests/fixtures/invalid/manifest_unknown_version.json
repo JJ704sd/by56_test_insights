@@ -1,0 +1,23 @@
+{
+  "schema_version": "2.0",
+  "change_id": "QUOTE-2026-08-11",
+  "version_type": "daily",
+  "changed_components": ["quote-agent"],
+  "agent_evaluation": {
+    "required": true,
+    "approved_by": "quote-qa-owner",
+    "evidence_ref": "policy://quote-agent/evaluation-required"
+  },
+  "dependencies": {"upstream": [], "downstream": []},
+  "risk_signals": [],
+  "dimensions": {
+    "business_flow": {"status": "not_affected", "reason": "ok"},
+    "exception_paths": {"status": "not_affected", "reason": "ok"},
+    "boundaries": {"status": "not_affected", "reason": "ok"},
+    "permissions": {"status": "not_affected", "reason": "ok"},
+    "data_consistency": {"status": "not_affected", "reason": "ok"},
+    "upstream_downstream": {"status": "not_affected", "reason": "ok"},
+    "side_effects": {"status": "not_affected", "reason": "ok"},
+    "recoverability": {"status": "not_affected", "reason": "ok"}
+  }
+}

@@ -7,3 +7,6 @@ tmp/
 dist/
 build/
 *.egg-info/
+
+# local debug captures
+test_run.log

@@ -1,0 +1,51 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://qualityctl.dev/schemas/v1/agent_run.schema.json",
+  "title": "Quality Gatekeeper Agent Run Row v1.0",
+  "description": "Single JSONL row consumed by evaluate_agent_evidence. Mirrored by qualityctl.validation.AgentRunV1.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "case_id",
+    "run_id",
+    "evaluation_fingerprint",
+    "technical_status"
+  ],
+  "properties": {
+    "case_id": { "type": "string", "minLength": 1 },
+    "run_id": { "type": "string", "minLength": 1 },
+    "evaluation_fingerprint": { "type": "string", "minLength": 1 },
+    "technical_status": {
+      "type": "string",
+      "enum": ["ok", "runner_invalid", "technical_failure"]
+    },
+    "output": { "type": "object" },
+    "error": { "type": "string", "minLength": 1 },
+    "manual_review": { "$ref": "#/$defs/manual_review" }
+  },
+  "$defs": {
+    "manual_review": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "reviewer_id",
+        "reviewer_role",
+        "rubric_version",
+        "evidence_ref",
+        "reviewed_at",
+        "status"
+      ],
+      "properties": {
+        "reviewer_id": { "type": "string", "minLength": 1 },
+        "reviewer_role": { "type": "string", "minLength": 1 },
+        "rubric_version": { "type": "string", "minLength": 1 },
+        "evidence_ref": { "type": "string", "minLength": 1 },
+        "reviewed_at": { "type": "string", "minLength": 1 },
+        "status": {
+          "type": "string",
+          "enum": ["pass", "fail"]
+        }
+      }
+    }
+  }
+}
