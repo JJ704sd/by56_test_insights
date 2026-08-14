@@ -5,6 +5,7 @@ from collections.abc import Mapping
 from typing import Any
 
 from .risk import RISK_DIMENSIONS, validate_risk_manifest
+from .validation import validate_catalog
 
 
 HIGH_RISK_DIMENSIONS = {
@@ -168,26 +169,27 @@ def select_regression_tests(
         return {
             "status": "BLOCKED",
             "risk_check": risk_check,
+            "errors": risk_check.get("errors", []),
             "selected": [],
             "excluded": [],
             "coverage_gaps": [],
             "automation_review": [],
         }
 
-    tests = catalog.get("tests") if isinstance(catalog, Mapping) else None
-    automation_policy = (
-        catalog.get("automation_policy") if isinstance(catalog, Mapping) else None
-    )
-    if not isinstance(tests, list):
+    catalog_check = validate_catalog(catalog)
+    if not catalog_check.ok:
         return {
             "status": "BLOCKED",
             "risk_check": risk_check,
-            "errors": ["catalog.tests must be an array"],
+            "errors": catalog_check.errors,
             "selected": [],
             "excluded": [],
             "coverage_gaps": [],
             "automation_review": [],
         }
+
+    tests = catalog["tests"]
+    automation_policy = catalog.get("automation_policy")
 
     changed = _string_set(manifest.get("changed_components"))
     dependencies = manifest.get("dependencies", {})

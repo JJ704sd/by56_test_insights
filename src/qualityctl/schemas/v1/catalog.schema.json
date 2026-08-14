@@ -1,0 +1,118 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://qualityctl.dev/schemas/v1/catalog.schema.json",
+  "title": "Quality Gatekeeper Test Catalog v1.0",
+  "description": "Test catalog and ROI policy consumed by select_regression_scope. Mirrored by qualityctl.validation.CatalogV1.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema_version", "tests"],
+  "properties": {
+    "schema_version": {
+      "type": "string",
+      "minLength": 1
+    },
+    "catalog_version": {
+      "type": "string",
+      "minLength": 1
+    },
+    "automation_policy": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "version",
+        "source_ref",
+        "approval_status",
+        "max_payback_months",
+        "min_monthly_net_minutes"
+      ],
+      "properties": {
+        "version": { "type": "string", "minLength": 1 },
+        "source_ref": { "type": "string", "minLength": 1 },
+        "approval_status": {
+          "type": "string",
+          "enum": ["APPROVED", "UNAPPROVED"]
+        },
+        "max_payback_months": { "type": "number", "exclusiveMinimum": 0 },
+        "min_monthly_net_minutes": { "type": "number", "minimum": 0 }
+      }
+    },
+    "tests": {
+      "type": "array",
+      "minItems": 1,
+      "items": { "$ref": "#/$defs/test_entry" }
+    }
+  },
+  "$defs": {
+    "test_entry": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "automated"],
+      "properties": {
+        "id": { "type": "string", "minLength": 1 },
+        "priority": { "type": "string", "minLength": 1 },
+        "components": {
+          "type": "array",
+          "items": { "type": "string", "minLength": 1 }
+        },
+        "dimensions": {
+          "type": "array",
+          "items": { "type": "string", "minLength": 1 }
+        },
+        "risks": {
+          "type": "array",
+          "items": { "type": "string", "minLength": 1 }
+        },
+        "suites": {
+          "type": "array",
+          "items": { "type": "string", "minLength": 1 }
+        },
+        "labels": {
+          "type": "array",
+          "items": { "type": "string", "minLength": 1 }
+        },
+        "automated": { "type": "boolean" },
+        "automation_fit": { "$ref": "#/$defs/automation_fit" }
+      }
+    },
+    "automation_fit": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "stable",
+        "repeatable",
+        "oracle",
+        "runs_per_month",
+        "manual_minutes",
+        "residual_review_minutes_per_run",
+        "maintenance_minutes_per_month",
+        "flaky_investigation_minutes_per_month",
+        "execution_cost_minutes_equivalent_per_month",
+        "data_maintenance_minutes_per_month",
+        "setup_minutes",
+        "data_basis",
+        "observation_window_days"
+      ],
+      "properties": {
+        "stable": { "type": "boolean" },
+        "repeatable": { "type": "boolean" },
+        "oracle": {
+          "type": "string",
+          "enum": ["exact", "schema", "rule", "state", "contract"]
+        },
+        "runs_per_month": { "type": "number", "exclusiveMinimum": 0 },
+        "manual_minutes": { "type": "number", "minimum": 0 },
+        "residual_review_minutes_per_run": { "type": "number", "minimum": 0 },
+        "maintenance_minutes_per_month": { "type": "number", "minimum": 0 },
+        "flaky_investigation_minutes_per_month": { "type": "number", "minimum": 0 },
+        "execution_cost_minutes_equivalent_per_month": { "type": "number", "minimum": 0 },
+        "data_maintenance_minutes_per_month": { "type": "number", "minimum": 0 },
+        "setup_minutes": { "type": "number", "minimum": 0 },
+        "data_basis": {
+          "type": "string",
+          "enum": ["ESTIMATED", "OBSERVED"]
+        },
+        "observation_window_days": { "type": "number", "exclusiveMinimum": 0 }
+      }
+    }
+  }
+}

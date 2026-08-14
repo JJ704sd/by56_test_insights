@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import argparse
+import json
 import sys
 from typing import Any
 
@@ -8,6 +9,13 @@ from .agent_eval import evaluate_agent_runs
 from .io import read_json, read_jsonl, write_json
 from .risk import validate_risk_manifest
 from .selection import select_regression_tests
+from .validation import (
+    ValidationResult,
+    validate_agent_runs,
+    validate_agent_spec,
+    validate_catalog,
+    validate_manifest,
+)
 
 
 def _exit_code(status: str) -> int:
@@ -16,6 +24,30 @@ def _exit_code(status: str) -> int:
     if status == "REVIEW_REQUIRED":
         return 1
     return 2
+
+
+def _fail_validation(command: str, kind: str, result: ValidationResult) -> int:
+    """Emit a structured validation error on stderr and return exit code 2."""
+
+    payload = {
+        "ok": False,
+        "command": command,
+        "kind": "structural_validation",
+        "input": kind,
+        "errors": list(result.errors),
+    }
+    print(
+        json.dumps(payload, ensure_ascii=False, indent=2),
+        file=sys.stderr,
+    )
+    return 2
+
+
+def _validate_runs_or_fail(command: str, runs: list[dict[str, Any]]) -> int | None:
+    failure = validate_agent_runs(runs)
+    if failure is not None:
+        return _fail_validation(command, "agent_run", failure)
+    return None
 
 
 def build_parser() -> argparse.ArgumentParser:
@@ -48,15 +80,33 @@ def main(argv: list[str] | None = None) -> int:
     try:
         result: dict[str, Any]
         if args.command == "risk-check":
-            result = validate_risk_manifest(read_json(args.manifest))
+            manifest = read_json(args.manifest)
+            check = validate_manifest(manifest)
+            if not check.ok:
+                return _fail_validation(args.command, "manifest", check)
+            result = validate_risk_manifest(manifest)
             status = result["status"]
         elif args.command == "select":
-            result = select_regression_tests(
-                read_json(args.catalog), read_json(args.manifest)
-            )
+            manifest = read_json(args.manifest)
+            catalog = read_json(args.catalog)
+            manifest_check = validate_manifest(manifest)
+            if not manifest_check.ok:
+                return _fail_validation(args.command, "manifest", manifest_check)
+            catalog_check = validate_catalog(catalog)
+            if not catalog_check.ok:
+                return _fail_validation(args.command, "catalog", catalog_check)
+            result = select_regression_tests(catalog, manifest)
             status = result["status"]
         else:
-            result = evaluate_agent_runs(read_json(args.spec), read_jsonl(args.runs))
+            spec = read_json(args.spec)
+            runs = read_jsonl(args.runs)
+            spec_check = validate_agent_spec(spec)
+            if not spec_check.ok:
+                return _fail_validation(args.command, "agent_spec", spec_check)
+            run_exit = _validate_runs_or_fail(args.command, runs)
+            if run_exit is not None:
+                return run_exit
+            result = evaluate_agent_runs(spec, runs)
             status = result["gate"]
         print(write_json(result, args.output))
         return _exit_code(status)

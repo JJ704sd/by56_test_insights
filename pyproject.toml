@@ -10,7 +10,10 @@ readme = "README.md"
 requires-python = ">=3.10"
 license = {text = "MIT"}
 authors = [{name = "Quality Engineering"}]
-dependencies = ["mcp>=2,<3"]
+dependencies = [
+    "mcp>=2,<3",
+    "pydantic>=2,<3",
+]
 
 [project.scripts]
 qualityctl = "qualityctl.cli:main"

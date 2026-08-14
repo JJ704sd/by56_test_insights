@@ -11,6 +11,9 @@ MISSING = object()
 MINIMUM_RUNS_BY_RISK = {"high": 3, "medium": 3, "low": 1}
 
 
+from .validation import validate_agent_run, validate_agent_spec  # noqa: E402
+
+
 def _finite_number(value: Any) -> bool:
     return (
         isinstance(value, (int, float))
@@ -165,38 +168,75 @@ def _evaluate_output(output: Any, assertions: list[Any]) -> tuple[bool, list[dic
     return all(result["passed"] for result in results), results
 
 
+def _blocked_evaluation(
+    spec: Mapping[str, Any], errors: list[str]
+) -> dict[str, Any]:
+    """Return a deterministic BLOCKED evaluation result when the spec is
+    structurally invalid. The shape mirrors the success path so callers do not
+    branch on whether validation passed.
+    """
+
+    return {
+        "gate": "BLOCKED",
+        "agent_version": spec.get("agent_version") if isinstance(spec, Mapping) else None,
+        "dataset_version": spec.get("dataset_version") if isinstance(spec, Mapping) else None,
+        "threshold_profile": {
+            "version": (
+                spec.get("threshold_profile", {}).get("version")
+                if isinstance(spec, Mapping) and isinstance(spec.get("threshold_profile"), Mapping)
+                else None
+            ),
+            "source_ref": None,
+            "approval_status": (
+                spec.get("threshold_profile", {}).get("approval_status")
+                if isinstance(spec, Mapping) and isinstance(spec.get("threshold_profile"), Mapping)
+                else None
+            ),
+        },
+        "run_counts": {
+            "planned": 0,
+            "observed": 0,
+            "valid_outputs": 0,
+            "runner_invalid": 0,
+            "technical_failures": 0,
+            "deterministic_failures": 0,
+            "manual_review_failures": 0,
+            "manual_review_missing": 0,
+            "passed": 0,
+        },
+        "errors": errors,
+        "case_results": [],
+    }
+
+
 def evaluate_agent_runs(spec: Mapping[str, Any], runs: list[Mapping[str, Any]]) -> dict[str, Any]:
-    """Aggregate repeated Agent runs without hiding invalid or technical failures."""
+    """Aggregate repeated Agent runs without hiding invalid or technical failures.
+
+    Pure structural validation (types, enums, presence, cross-field rules on
+    assertions and runs) is delegated to
+    :func:`qualityctl.validation.validate_agent_spec` and
+    :func:`qualityctl.validation.validate_agent_run`. This function retains
+    the evaluation semantics: fingerprint matching, Wilson intervals,
+    failure-domain split, and the final gate roll-up.
+    """
 
     errors: list[str] = []
-    for field in ("agent_version", "dataset_version", "evaluation_fingerprint"):
-        if not str(spec.get(field, "")).strip() if isinstance(spec, Mapping) else True:
-            errors.append(f"{field} is required")
-    execution_profile = spec.get("execution_profile") if isinstance(spec, Mapping) else None
-    if not isinstance(execution_profile, Mapping):
-        errors.append("execution_profile is required")
-    else:
-        for field in (
-            "prompt_version",
-            "model_id",
-            "toolset_version",
-            "knowledge_snapshot",
-            "runner_version",
-        ):
-            if not str(execution_profile.get(field, "")).strip():
-                errors.append(f"execution_profile.{field} is required")
-        if not isinstance(execution_profile.get("model_parameters"), Mapping):
-            errors.append("execution_profile.model_parameters must be an object")
-    profile = spec.get("threshold_profile") if isinstance(spec, Mapping) else None
-    if not isinstance(profile, Mapping):
-        profile = {}
-        errors.append("threshold_profile is required")
+
+    spec_check = validate_agent_spec(spec)
+    if not spec_check.ok:
+        return _blocked_evaluation(spec, spec_check.errors)
+
+    for index, raw_run in enumerate(runs):
+        if not isinstance(raw_run, Mapping):
+            errors.append(f"runs[{index}]: must be a JSON object")
+            continue
+        run_check = validate_agent_run(raw_run)
+        if not run_check.ok:
+            errors.append(f"runs[{index}]: " + "; ".join(run_check.errors))
+
+    execution_profile = spec.get("execution_profile", {})
+    profile = spec.get("threshold_profile", {})
     approval_status = profile.get("approval_status")
-    if approval_status not in {"APPROVED", "UNAPPROVED"}:
-        errors.append("threshold_profile.approval_status must be APPROVED or UNAPPROVED")
-    for field in ("version", "source_ref"):
-        if not str(profile.get(field, "")).strip():
-            errors.append(f"threshold_profile.{field} is required")
     cases = spec.get("cases") if isinstance(spec, Mapping) else None
     if not isinstance(cases, list) or not cases:
         errors.append("cases must contain at least one case")

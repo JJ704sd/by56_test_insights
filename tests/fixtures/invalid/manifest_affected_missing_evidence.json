@@ -1,0 +1,23 @@
+{
+  "schema_version": "1.0",
+  "change_id": "BAD",
+  "version_type": "weekly",
+  "changed_components": ["x"],
+  "agent_evaluation": {
+    "required": false,
+    "approved_by": "qa",
+    "evidence_ref": "policy://x"
+  },
+  "dependencies": {"upstream": [], "downstream": []},
+  "risk_signals": [],
+  "dimensions": {
+    "business_flow": {"status": "affected"},
+    "exception_paths": {"status": "not_affected", "reason": "ok"},
+    "boundaries": {"status": "not_affected", "reason": "ok"},
+    "permissions": {"status": "not_affected", "reason": "ok"},
+    "data_consistency": {"status": "not_affected", "reason": "ok"},
+    "upstream_downstream": {"status": "not_affected", "reason": "ok"},
+    "side_effects": {"status": "not_affected", "reason": "ok"},
+    "recoverability": {"status": "not_affected", "reason": "ok"}
+  }
+}

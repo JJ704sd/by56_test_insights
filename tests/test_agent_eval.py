@@ -8,6 +8,7 @@ from qualityctl.agent_eval import evaluate_agent_runs, wilson_interval
 
 def spec() -> dict:
     return {
+        "schema_version": "1.0",
         "agent_version": "a1",
         "dataset_version": "d1",
         "evaluation_fingerprint": "sha256:test-fixture-v1",
@@ -191,7 +192,14 @@ class AgentEvaluationTests(unittest.TestCase):
             for index in range(1, 4)
         ]
         result = evaluate_agent_runs(evaluation_spec, runs)
-        self.assertEqual(result["gate"], "REVIEW_REQUIRED")
+        # Bare-string manual_review is malformed (Pydantic schema rejects the
+        # row); the evaluation is therefore BLOCKED rather than quietly
+        # promoted to a missing-review REVIEW_REQUIRED.
+        self.assertEqual(result["gate"], "BLOCKED")
+        self.assertTrue(
+            any("manual_review" in err for err in result["errors"]),
+            result["errors"],
+        )
 
     def test_medium_risk_single_sample_is_blocked(self) -> None:
         evaluation_spec = spec()
