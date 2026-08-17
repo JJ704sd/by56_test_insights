@@ -204,7 +204,9 @@ qualityctl agent-eval examples/agent-cases.json examples/agent-runs.jsonl
 python C:\Users\Administrator\.codex\skills\.system\plugin-creator\scripts\validate_plugin.py D:\by56_test_insights\plugins\quality-gatekeeper
 ```
 
-当前基线是 32 项单元测试、5 个 MCP 工具，以及 smoke test 中真实调用 ROI 和最终 release gate。修改契约后必须同时更新单元测试、examples、Skill 说明和 smoke test。
+当前基线是 100 项单元测试、5 个 MCP 工具，以及 smoke test 中真实调用 ROI 和最终
+release gate（2026-08-17，工作区 Python 3.14.6）。这只是仓库/示例基线，不是业务试点
+证据。修改契约后必须同时更新单元测试、examples、Skill 说明和 smoke test。
 
 ## 9. 如何安全扩展
 
@@ -246,7 +248,7 @@ LLM Judge 只能作为带来源的语义证据，不能冒充人工复核，也�
 1. ~~使用 Pydantic 模型和版本化 JSON Schema 收紧 MCP 输入~~ — **Round 1 完成**：`qualityctl.validation` + `qualityctl/schemas/v1/`，工具边界 `ToolError`，CLI 退出码 2；
 2. 接入只读策略注册中心，验证 Agent 适用性、阈值和 ROI policy 的审批摘要；
 3. 将 MCP 部署为带认证、授权、审计和规则版本的 Streamable HTTP 服务；
-4. ~~完成 8 周影子试点，证明净收益和风险发现效果后再接 CI 硬门禁~~ — **Round 1 完成最小 CI 基线**：`.github/workflows/python-qualityctl.yml`（windows-latest + Python 3.11 + pip cache + unittest + MCP smoke；action SHA 已 pin）；
+4. 完成 8 周影子试点，证明净收益和风险发现效果后再接 CI 硬门禁 — **Round 2 未启动**：`R2-G0` 尚未满足；当前仅有 [P0 试点脚手架](round-2-pilot/README.md)。Round 1 的最小 CI 基线仍由 `.github/workflows/python-qualityctl.yml` 提供（windows-latest + Python 3.11 + pip cache + unittest + MCP smoke；action SHA 已 pin）；
 5. 最后再扩展执行器和平台 adapter，避免先做大而全的自动化平台。
 
 ### Round 1 落地说明

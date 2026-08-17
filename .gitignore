@@ -10,3 +10,7 @@ build/
 
 # local debug captures
 test_run.log
+
+# Round 2 controlled evidence must stay outside the repository.
+pilots/
+.r2-evidence/

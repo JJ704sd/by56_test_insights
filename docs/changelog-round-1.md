@@ -61,7 +61,7 @@ This round is **expand** phase only. No `v1.1` introduced.
 
 ## Acceptance evidence
 
-- All 93 unit tests green (`python -m unittest discover -s tests`)
+- All 100 unit tests green (`python -m unittest discover -s tests`); the later self-check additions are included in the 100-test total above.
 - `python plugins/quality-gatekeeper/scripts/smoke_test.py` PASS (real stdio MCP session)
 - `qualityctl risk-check examples/risk-manifest.json` ⇒ exit 0, `READY`
 - `qualityctl risk-check tests/fixtures/invalid/manifest_missing_schema_version.json` ⇒ exit 2, JSON to stderr

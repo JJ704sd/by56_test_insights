@@ -14,6 +14,8 @@ LLM 插件 MVP 见 [插件 MVP Spec](docs/plugin-mvp-spec.md)，后续维护先�
 
 三类入参（manifest / catalog / agent_spec）与每条 Agent run 都有版本化 JSON Schema 与 Pydantic v2 校验器，详见 [`docs/schemas/v1/README.md`](docs/schemas/v1/README.md)。MCP 工具与 CLI 子命令均在边界先做结构校验，非 `ok` 时返回结构化错误。CI 流水线见 `.github/workflows/python-qualityctl.yml`（windows-latest + Python 3.11 + 单元测试 + MCP stdio smoke）。
 
+截至 2026-08-17，当前工作区基线为 Python 3.14.6 下 `100/100` 项单元测试通过；该数量是仓库验证基线，不是任何真实业务试点证据。Round 2 目前只有 [P0 试点脚手架](docs/round-2-pilot/README.md)，`R2-G0` 尚未满足，本次阶段输出为 `REMAIN_BLOCKED`，8 周影子时钟尚未启动。
+
 ## 快速开始
 
 规则核心使用 Python 3.10+；LLM 插件通过官方 Python MCP SDK 暴露工具。先安装：
@@ -39,7 +41,7 @@ python -m pip install -e .
 qualityctl --help
 ```
 
-设计结论、开源项目映射和分阶段路线图见 [自动化机会地图](docs/automation-opportunity-map.md)；可评审、可拆票、可验收的首版规划见 [MVP Spec](docs/mvp-spec.md)。
+设计结论、开源项目映射和分阶段路线图见 [自动化机会地图](docs/automation-opportunity-map.md)；可评审、可拆票、可验收的首版规划见 [MVP Spec](docs/mvp-spec.md)。下一阶段的真实业务影子试点、指标门槛和有限硬门禁准入标准见 [Round 2 Spec](docs/round-2-shadow-pilot-spec.md)；当前启动准备的工作包、依赖、证据合同和可拆票清单见 [R2-G0 Execution Spec](docs/round-2-g0-execution-spec.md)；启动审计与模板见 [Round 2 P0 脚手架](docs/round-2-pilot/README.md)。
 
 ## 核心边界
 
