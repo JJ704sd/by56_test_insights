@@ -3,9 +3,17 @@ from __future__ import annotations
 import argparse
 import json
 import sys
+from pathlib import Path
 from typing import Any
 
 from .agent_eval import evaluate_agent_runs
+from .evidence import (
+    draft_difference,
+    freeze_ledger,
+    validate_adjudication_record,
+    verify_change_bundle,
+    write_json_exclusive,
+)
 from .io import read_json, read_jsonl, write_json
 from .risk import validate_risk_manifest
 from .selection import select_regression_tests
@@ -50,6 +58,106 @@ def _validate_runs_or_fail(command: str, runs: list[dict[str, Any]]) -> int | No
     return None
 
 
+def _evidence_error(
+    command: str,
+    code: str,
+    message: str,
+    *,
+    paths: list[str] | None = None,
+    errors: list[str] | None = None,
+) -> dict[str, Any]:
+    return {
+        "ok": False,
+        "command": command,
+        "kind": "evidence_error",
+        "code": code,
+        "message": message,
+        "paths": list(paths or []),
+        "errors": list(errors or []),
+    }
+
+
+def _print_evidence_error(payload: dict[str, Any]) -> int:
+    print(json.dumps(payload, ensure_ascii=False, indent=2), file=sys.stderr)
+    return 2
+
+
+def _evidence_exit_code(status: str) -> int:
+    if status in {"ELIGIBLE", "FROZEN", "VALID", "DRAFT"}:
+        return 0
+    if status == "EXCLUDED":
+        return 1
+    return 2
+
+
+def _run_evidence_command(args: argparse.Namespace) -> int:
+    command = f"evidence {args.evidence_command}"
+    input_path = str(args.input)
+    output_path = str(args.output)
+    try:
+        payload = read_json(input_path)
+    except FileNotFoundError as exc:
+        return _print_evidence_error(
+            _evidence_error(
+                command,
+                "INPUT_NOT_FOUND",
+                str(exc),
+                paths=[input_path],
+            )
+        )
+    except (OSError, ValueError, TypeError) as exc:
+        return _print_evidence_error(
+            _evidence_error(
+                command,
+                "INPUT_READ_ERROR",
+                str(exc),
+                paths=[input_path],
+            )
+        )
+
+    try:
+        if args.evidence_command == "verify-change":
+            result = verify_change_bundle(payload, base_dir=Path(input_path).parent)
+        elif args.evidence_command == "draft-diff":
+            result = draft_difference(payload, base_dir=Path(input_path).parent)
+        elif args.evidence_command == "validate-adjudication":
+            result = validate_adjudication_record(payload)
+        else:
+            result = freeze_ledger(payload)
+    except (OSError, ValueError, TypeError, KeyError) as exc:
+        return _print_evidence_error(
+            _evidence_error(
+                command,
+                "PROCESSING_ERROR",
+                str(exc),
+                paths=[input_path],
+            )
+        )
+
+    try:
+        write_json_exclusive(result, output_path)
+    except FileExistsError as exc:
+        return _print_evidence_error(
+            _evidence_error(
+                command,
+                "OUTPUT_EXISTS",
+                "output path already exists; exclusive-create refused to overwrite it",
+                paths=[output_path],
+                errors=[str(exc)],
+            )
+        )
+    except (OSError, TypeError, ValueError) as exc:
+        return _print_evidence_error(
+            _evidence_error(
+                command,
+                "OUTPUT_WRITE_ERROR",
+                str(exc),
+                paths=[output_path],
+            )
+        )
+    return _evidence_exit_code(str(result.get("status", "BLOCKED")))
+
+
 def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(
         prog="qualityctl",
@@ -71,12 +179,30 @@ def build_parser() -> argparse.ArgumentParser:
     agent.add_argument("runs")
     agent.add_argument("--output", "-o")
 
+    evidence = subparsers.add_parser(
+        "evidence", help="verify and freeze Round 2 pilot evidence"
+    )
+    evidence_subparsers = evidence.add_subparsers(
+        dest="evidence_command", required=True
+    )
+    for name, help_text in (
+        ("verify-change", "verify one Pilot Evidence change bundle"),
+        ("draft-diff", "draft a machine-only manual/tool scope difference"),
+        ("validate-adjudication", "validate an authorized difference adjudication"),
+        ("freeze-ledger", "freeze eligible, excluded, and attempt ledger entries"),
+    ):
+        child = evidence_subparsers.add_parser(name, help=help_text)
+        child.add_argument("input")
+        child.add_argument("--output", "-o", required=True)
+
     return parser
 
 
 def main(argv: list[str] | None = None) -> int:
     parser = build_parser()
     args = parser.parse_args(argv)
+    if args.command == "evidence":
+        return _run_evidence_command(args)
     try:
         result: dict[str, Any]
         if args.command == "risk-check":

@@ -1,0 +1,36 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://qualityctl.dev/schemas/v1/difference-draft.schema.json",
+  "title": "Difference Draft v1.0",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["contract", "manual_scope", "tool_scope", "differences", "counts", "generated_at", "decision_digest"],
+  "properties": {
+    "contract": { "const": "difference-draft@1.0" },
+    "status": { "const": "DRAFT" },
+    "identity": { "type": ["object", "null"] },
+    "manual_scope": { "oneOf": [{ "type": "object" }, { "type": "array" }] },
+    "tool_scope": { "oneOf": [{ "type": "object" }, { "type": "array" }] },
+    "differences": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["difference_id", "test_id", "side", "manual_present", "tool_present"],
+        "properties": {
+          "difference_id": { "type": "string", "minLength": 1 },
+          "test_id": { "type": "string", "minLength": 1 },
+          "side": { "enum": ["MANUAL_ONLY", "TOOL_ONLY"] },
+          "manual_present": { "type": "boolean" },
+          "tool_present": { "type": "boolean" },
+          "risk": { "type": "string", "minLength": 1 },
+          "high_risk": { "type": "boolean" }
+        }
+      }
+    },
+    "counts": { "type": "object" },
+    "generated_at": { "type": "string", "minLength": 1 },
+    "formal_release_effect": { "const": "NONE" },
+    "decision_digest": { "type": "string", "minLength": 1 }
+  }
+}

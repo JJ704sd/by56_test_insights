@@ -1,7 +1,5 @@
 from __future__ import annotations
 
-import hashlib
-import json
 from collections.abc import Mapping
 from copy import deepcopy
 from datetime import datetime, timezone
@@ -9,6 +7,7 @@ from typing import Any
 from urllib.parse import urlsplit, urlunsplit
 
 from qualityctl import RISK_DIMENSIONS, __version__ as CORE_VERSION
+from qualityctl.evidence import canonical_digest, canonical_json
 from qualityctl.gate import decide_quality_gate
 
 
@@ -25,21 +24,6 @@ MODEL_PARAMETER_ALLOWLIST = {
     "seed",
 }
 MAX_TEXT = 500
-
-
-def _canonical_json(value: Any) -> str:
-    return json.dumps(
-        value,
-        ensure_ascii=False,
-        sort_keys=True,
-        separators=(",", ":"),
-        allow_nan=False,
-    )
-
-
-def _digest(value: Any) -> str:
-    encoded = _canonical_json(value).encode("utf-8")
-    return f"sha256:{hashlib.sha256(encoded).hexdigest()}"
 
 
 def _text(value: Any, *, limit: int = MAX_TEXT) -> str | None:
@@ -509,7 +493,7 @@ def _conversation_contexts(report: dict[str, Any]) -> dict[str, dict[str, Any]]:
                 f"evaluated={case['evaluated']}",
                 f"hard_fail_on_any={case['hard_fail_on_any']}",
                 "failure_domains="
-                + _canonical_json(
+                + canonical_json(
                     {
                         "runner_invalid": case["runner_invalid"],
                         "technical": case["technical_failures"],
@@ -594,12 +578,12 @@ def build_quality_report_model(
         integrity_issues.append("policy_version is missing")
 
     input_digests: dict[str, str | None] = {
-        "manifest": _digest(manifest),
-        "catalog": _digest(catalog),
-        "agent_spec": _digest(agent_spec) if agent_spec is not None else None,
-        "agent_runs": _digest(agent_runs) if agent_runs is not None else None,
+        "manifest": canonical_digest(manifest),
+        "catalog": canonical_digest(catalog),
+        "agent_spec": canonical_digest(agent_spec) if agent_spec is not None else None,
+        "agent_runs": canonical_digest(agent_runs) if agent_runs is not None else None,
     }
-    decision_digest = _digest(
+    decision_digest = canonical_digest(
         {
             "core_version": CORE_VERSION,
             "input_digests": input_digests,

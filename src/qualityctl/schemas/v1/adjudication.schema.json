@@ -1,0 +1,35 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://qualityctl.dev/schemas/v1/adjudication.schema.json",
+  "title": "Difference Adjudication v1.0",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["contract", "identity", "difference_draft_digest", "items", "reviewer_id", "reviewer_role", "adjudicated_at", "status"],
+  "properties": {
+    "contract": { "const": "adjudication@1.0" },
+    "identity": { "type": "object" },
+    "difference_draft_digest": { "type": "string", "minLength": 1 },
+    "items": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["difference_id", "classification", "evidence_refs", "status", "adjudicator", "adjudicated_at"],
+        "properties": {
+          "difference_id": { "type": "string", "minLength": 1 },
+          "classification": { "type": "string", "minLength": 1 },
+          "evidence_refs": { "type": "array", "minItems": 1, "items": { "type": "string", "minLength": 1 } },
+          "high_risk": { "type": "boolean" },
+          "status": { "enum": ["OPEN", "CLOSED"] },
+          "adjudicator": { "type": "string", "minLength": 1 },
+          "adjudicated_at": { "type": "string", "minLength": 1 }
+        }
+      }
+    },
+    "reviewer_id": { "type": "string", "minLength": 1 },
+    "reviewer_role": { "type": "string", "minLength": 1 },
+    "adjudicated_at": { "type": "string", "minLength": 1 },
+    "status": { "enum": ["OPEN", "CLOSED"] },
+    "formal_release_effect": { "const": "NONE" }
+  }
+}

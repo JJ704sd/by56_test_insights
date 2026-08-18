@@ -131,6 +131,23 @@ without parsing free-form text:
   `CallToolResult(is_error=true, content=[TextContent(...)])`.
 - The CLI prints the same JSON to stderr and exits with code `2`.
 
+## Round 2 Pilot Evidence v1
+
+`qualityctl.evidence` adds an outer, append-only evidence contract without
+changing the four Round 1 input schemas. The pinned resources are
+[`pilot-evidence-bundle.schema.json`](../../../src/qualityctl/schemas/v1/pilot-evidence-bundle.schema.json),
+[`difference-draft.schema.json`](../../../src/qualityctl/schemas/v1/difference-draft.schema.json),
+[`adjudication.schema.json`](../../../src/qualityctl/schemas/v1/adjudication.schema.json),
+[`change-evidence-report.schema.json`](../../../src/qualityctl/schemas/v1/change-evidence-report.schema.json),
+and [`evidence-ledger.schema.json`](../../../src/qualityctl/schemas/v1/evidence-ledger.schema.json).
+
+The Pilot reader accepts only the pinned `1.0` matrix, recomputes canonical
+SHA-256 digests, rejects stale output attached to failed Agent runs, and writes
+new reports with exclusive-create. Every Pilot output has
+`formal_release_effect: "NONE"`; a raw Gate `release_allowed: true` never
+becomes a formal release action. During the current `BLOCKED_BY_R2_G0` phase,
+only an explicit `FIXTURE_DRY_RUN` bundle may be verified.
+
 ## References
 
 - `docs/plugin-developer-guide.md §10` — productization roadmap
