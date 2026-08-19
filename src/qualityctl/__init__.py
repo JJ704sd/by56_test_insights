@@ -10,12 +10,19 @@ from .evidence import (
     verify_change_bundle,
 )
 from .gate import decide_quality_gate
+from .iteration import (
+    ITERATION_INDEX_CONTRACT,
+    ITERATION_SUMMARY_CONTRACT,
+    summarize_iteration,
+)
 from .risk import RISK_DIMENSIONS, validate_risk_manifest
 from .selection import evaluate_automation_candidate, select_regression_tests
 
 __all__ = [
     "RISK_DIMENSIONS",
     "FORMAL_RELEASE_EFFECT",
+    "ITERATION_INDEX_CONTRACT",
+    "ITERATION_SUMMARY_CONTRACT",
     "canonical_digest",
     "compare_scopes",
     "decide_quality_gate",
@@ -23,6 +30,7 @@ __all__ = [
     "evaluate_automation_candidate",
     "freeze_ledger",
     "select_regression_tests",
+    "summarize_iteration",
     "validate_catalog_readiness",
     "validate_risk_manifest",
     "verify_change_bundle",

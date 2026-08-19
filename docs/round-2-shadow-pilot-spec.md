@@ -282,6 +282,10 @@ flowchart LR
 
 ## 10. 阶段 Gate 与时间线
 
+`R2-G0_READY` 之后的证据契约、执行工作包、兼容过渡和 G1–G3 验收见
+[Round 2 P1 Evidence Pipeline Spec](round-2-p1-evidence-pipeline-spec.md)。在 `R2-G0` 未通过时，
+该 P1 文档只允许评审和脱敏 fixture 验证。
+
 | Gate | 时间 | 进入条件 | 退出条件 |
 | --- | --- | --- | --- |
 | `R2-G0 READY` | 影子期前 | 第 5.2 节全部完成 | 批准启动 8 周时钟 |

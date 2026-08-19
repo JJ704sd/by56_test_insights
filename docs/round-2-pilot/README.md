@@ -26,6 +26,7 @@
 | 文件 | 用途 |
 | --- | --- |
 | [`../round-2-g0-execution-spec.md`](../round-2-g0-execution-spec.md) | R2-G0 工作包、依赖、验收合同和可拆票执行清单 |
+| [`../round-2-p1-evidence-pipeline-spec.md`](../round-2-p1-evidence-pipeline-spec.md) | `R2-G0_READY` 后的影子证据流水线、G1–G3 执行与决策契约；当前未激活 |
 | [`pilot-charter.md`](pilot-charter.md) | 试点信息、范围、目标、硬门槛和签署页 |
 | [`owner-raci.md`](owner-raci.md) | Owner/RACI、升级和停止责任 |
 | [`decisions-to-approve.md`](decisions-to-approve.md) | 集中列出需要责任人批准的决策 |

@@ -1,0 +1,167 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://qualityctl.dev/schemas/v1/iteration-index.schema.json",
+  "title": "Frozen Iteration Index v1.0",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["contract", "schema_version", "identity", "freeze", "activation", "versions", "ledger", "changes", "formal_evidence", "policy", "attestations", "formal_release_effect"],
+  "properties": {
+    "contract": { "const": "iteration-index@1.0" },
+    "schema_version": { "const": "1.0" },
+    "identity": { "$ref": "#/$defs/identity" },
+    "freeze": { "$ref": "#/$defs/freeze" },
+    "activation": { "$ref": "#/$defs/activation" },
+    "versions": { "$ref": "#/$defs/versions" },
+    "ledger": { "$ref": "#/$defs/artifact" },
+    "changes": { "type": "array", "minItems": 1, "items": { "$ref": "#/$defs/change" } },
+    "formal_evidence": { "$ref": "#/$defs/formal_evidence" },
+    "policy": { "$ref": "#/$defs/policy" },
+    "attestations": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "secret_scan": { "$ref": "#/$defs/attestation" },
+        "controlled_storage": { "$ref": "#/$defs/attestation" },
+        "formal_result": { "$ref": "#/$defs/attestation" },
+        "least_privilege": { "$ref": "#/$defs/attestation" }
+      },
+      "required": ["secret_scan", "controlled_storage", "formal_result", "least_privilege"]
+    },
+    "formal_release_effect": { "const": "NONE" }
+  },
+  "$defs": {
+    "identity": {
+      "type": "object", "additionalProperties": false,
+      "required": ["pilot_id", "iteration_id", "evidence_class"],
+      "properties": {
+        "pilot_id": { "type": "string", "minLength": 1 },
+        "iteration_id": { "type": "string", "minLength": 1 },
+        "evidence_class": { "enum": ["FIXTURE", "REAL"] }
+      }
+    },
+    "freeze": {
+      "type": "object", "additionalProperties": false,
+      "required": ["frozen_at", "frozen_by", "freeze_ref", "freeze_digest"],
+      "properties": {
+        "frozen_at": { "type": "string", "minLength": 1 },
+        "frozen_by": { "type": "string", "minLength": 1 },
+        "freeze_ref": { "type": "string", "minLength": 1 },
+        "freeze_digest": { "type": "string", "minLength": 1 }
+      }
+    },
+    "activation": {
+      "type": "object", "additionalProperties": false,
+      "required": ["r2_g0_status", "approval_ref", "approval_digest"],
+      "properties": {
+        "r2_g0_status": { "type": "string", "minLength": 1 },
+        "approval_ref": { "type": "string", "minLength": 1 },
+        "approval_digest": { "type": "string", "minLength": 1 },
+        "day0": { "type": ["string", "null"] }
+      }
+    },
+    "schema_versions": {
+      "type": "object", "additionalProperties": false,
+      "required": ["pilot_evidence", "manifest", "catalog", "agent_spec", "agent_run", "difference_draft", "adjudication", "change_report", "ledger", "iteration_index", "iteration_summary"],
+      "properties": {
+        "pilot_evidence": { "const": "1.0" }, "manifest": { "const": "1.0" }, "catalog": { "const": "1.0" },
+        "agent_spec": { "const": "1.0" }, "agent_run": { "const": "1.0" }, "difference_draft": { "const": "1.0" },
+        "adjudication": { "const": "1.0" }, "change_report": { "const": "1.0" }, "ledger": { "const": "1.0" },
+        "iteration_index": { "const": "1.0" }, "iteration_summary": { "const": "1.0" }
+      }
+    },
+    "versions": {
+      "type": "object", "additionalProperties": false,
+      "required": ["schema_versions", "qualityctl_version", "core_version", "core_commit", "python_version", "catalog_version", "mapping_version", "threshold_version", "roi_policy_version", "canonicalization_version", "writer_reader_matrix", "matrix_approved_by", "matrix_approved_at", "matrix_valid_until"],
+      "properties": {
+        "schema_versions": { "$ref": "#/$defs/schema_versions" },
+        "qualityctl_version": { "type": "string", "minLength": 1 }, "core_version": { "type": "string", "minLength": 1 },
+        "core_commit": { "type": "string", "minLength": 1 }, "python_version": { "type": "string", "minLength": 1 },
+        "catalog_version": { "type": "string", "minLength": 1 }, "mapping_version": { "type": "string", "minLength": 1 },
+        "threshold_version": { "type": "string", "minLength": 1 }, "roi_policy_version": { "type": "string", "minLength": 1 },
+        "canonicalization_version": { "type": "string", "minLength": 1 }, "writer_reader_matrix": { "type": "string", "minLength": 1 },
+        "matrix_approved_by": { "type": "string", "minLength": 1 }, "matrix_approved_at": { "type": "string", "minLength": 1 },
+        "matrix_valid_until": { "type": "string", "minLength": 1 }
+      }
+    },
+    "artifact": {
+      "type": "object", "additionalProperties": false,
+      "required": ["path", "media_type", "size", "digest"],
+      "properties": {
+        "path": { "type": "string", "minLength": 1 }, "media_type": { "type": "string", "minLength": 1 },
+        "size": { "type": "integer", "minimum": 0 }, "digest": { "type": "string", "minLength": 1 }
+      }
+    },
+    "change_identity": {
+      "type": "object", "additionalProperties": false,
+      "required": ["pilot_id", "iteration_id", "change_id", "run_id"],
+      "properties": {
+        "pilot_id": { "type": "string", "minLength": 1 }, "iteration_id": { "type": "string", "minLength": 1 },
+        "change_id": { "type": "string", "minLength": 1 }, "run_id": { "type": "string", "minLength": 1 }
+      }
+    },
+    "change": {
+      "type": "object", "additionalProperties": false,
+      "required": ["identity", "status", "evidence_digest", "report", "bundle", "draft", "adjudication"],
+      "properties": {
+        "identity": { "$ref": "#/$defs/change_identity" }, "status": { "enum": ["ELIGIBLE", "EXCLUDED", "BLOCKED", "STOP_TRIGGERED"] },
+        "evidence_digest": { "type": "string", "minLength": 1 }, "report": { "$ref": "#/$defs/artifact" },
+        "bundle": { "$ref": "#/$defs/artifact" }, "draft": { "$ref": "#/$defs/artifact" }, "adjudication": { "$ref": "#/$defs/artifact" },
+        "attempt_ids": { "type": "array", "items": { "type": "string", "minLength": 1 } }, "out_of_plan": { "type": "boolean" }
+      }
+    },
+    "attempt": {
+      "type": "object", "additionalProperties": false,
+      "required": ["pilot_id", "iteration_id", "change_id", "run_id", "attempt_id", "kind", "out_of_plan", "digest", "started_at", "ended_at", "status", "ref"],
+      "properties": {
+        "pilot_id": { "type": "string", "minLength": 1 }, "iteration_id": { "type": "string", "minLength": 1 },
+        "change_id": { "type": "string", "minLength": 1 }, "run_id": { "type": "string", "minLength": 1 },
+        "attempt_id": { "type": "string", "minLength": 1 }, "kind": { "type": "string", "minLength": 1 },
+        "out_of_plan": { "type": "boolean" }, "digest": { "type": "string", "minLength": 1 },
+        "started_at": { "type": "string", "minLength": 1 }, "ended_at": { "type": "string", "minLength": 1 },
+        "status": { "type": "string", "minLength": 1 }, "ref": { "type": "string", "minLength": 1 },
+        "initial_attempt_ref": { "type": ["string", "null"], "minLength": 1 }
+      }
+    },
+    "formal_evidence": {
+      "type": "object", "additionalProperties": false,
+      "required": [],
+      "properties": {
+        "planned_runs": { "type": ["integer", "null"], "minimum": 0 }, "observed_runs": { "type": ["integer", "null"], "minimum": 0 },
+        "failures": { "type": ["integer", "null"], "minimum": 0 }, "attributed_failures": { "type": ["integer", "null"], "minimum": 0 },
+        "runner_invalid": { "type": ["integer", "null"], "minimum": 0 }, "retry_groups": { "type": ["integer", "null"], "minimum": 0 },
+        "retry_groups_complete": { "type": ["integer", "null"], "minimum": 0 }, "tool_added_items": { "type": ["integer", "null"], "minimum": 0 },
+        "tool_false_positive": { "type": ["integer", "null"], "minimum": 0 }, "high_risk_false_negative": { "type": ["integer", "null"], "minimum": 0 },
+        "error_pass": { "type": ["integer", "null"], "minimum": 0 }, "refs": { "type": "array", "items": { "$ref": "#/$defs/artifact" } }
+      }
+    },
+    "policy": {
+      "type": "object", "additionalProperties": false,
+      "required": ["version", "ref", "digest", "approved_by", "approved_at", "valid_until", "formula_version"],
+      "properties": {
+        "version": { "type": "string", "minLength": 1 }, "ref": { "type": "string", "minLength": 1 }, "digest": { "type": "string", "minLength": 1 },
+        "approved_by": { "type": "string", "minLength": 1 }, "approved_at": { "type": "string", "minLength": 1 }, "valid_until": { "type": "string", "minLength": 1 },
+        "formula_version": { "type": "string", "minLength": 1 }, "costs": { "$ref": "#/$defs/costs" }
+      }
+    },
+    "costs": {
+      "type": "object", "additionalProperties": false,
+      "properties": {
+        "build_minutes": { "type": ["integer", "number", "null"], "minimum": 0 }, "gross_savings_minutes": { "type": ["integer", "number", "null"], "minimum": 0 },
+        "maintenance_minutes": { "type": ["integer", "number", "null"], "minimum": 0 }, "false_positive_minutes": { "type": ["integer", "number", "null"], "minimum": 0 },
+        "flaky_minutes": { "type": ["integer", "number", "null"], "minimum": 0 }, "runner_minutes": { "type": ["integer", "number", "null"], "minimum": 0 },
+        "llm_minutes": { "type": ["integer", "number", "null"], "minimum": 0 }, "run_minutes": { "type": ["integer", "number", "null"], "minimum": 0 },
+        "data_minutes": { "type": ["integer", "number", "null"], "minimum": 0 }
+      }
+    },
+    "attestation": {
+      "type": "object", "additionalProperties": false,
+      "required": ["status", "version", "ref", "digest"],
+      "properties": {
+        "status": { "type": "string", "minLength": 1 }, "version": { "type": "string", "minLength": 1 },
+        "ref": { "type": "string", "minLength": 1 }, "digest": { "type": "string", "minLength": 1 },
+        "approved_by": { "type": ["string", "null"], "minLength": 1 }, "expires_at": { "type": ["string", "null"], "minLength": 1 },
+        "release_effect": { "type": ["string", "null"], "minLength": 1 }, "sensitive_data": { "type": ["boolean", "null"] }
+      }
+    }
+  }
+}

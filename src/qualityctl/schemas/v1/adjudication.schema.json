@@ -7,7 +7,16 @@
   "required": ["contract", "identity", "difference_draft_digest", "items", "reviewer_id", "reviewer_role", "adjudicated_at", "status"],
   "properties": {
     "contract": { "const": "adjudication@1.0" },
-    "identity": { "type": "object" },
+    "identity": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["pilot_id", "change_id", "run_id"],
+      "properties": {
+        "pilot_id": { "type": "string", "minLength": 1 },
+        "change_id": { "type": "string", "minLength": 1 },
+        "run_id": { "type": "string", "minLength": 1 }
+      }
+    },
     "difference_draft_digest": { "type": "string", "minLength": 1 },
     "items": {
       "type": "array",
