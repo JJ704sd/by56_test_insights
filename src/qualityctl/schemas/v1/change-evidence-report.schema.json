@@ -3,16 +3,38 @@
   "$id": "https://qualityctl.dev/schemas/v1/change-evidence-report.schema.json",
   "title": "Change Evidence Report v1.0",
   "type": "object",
-  "additionalProperties": true,
-  "required": ["contract", "status", "code", "errors", "formal_release_effect", "formal_release_allowed", "decision_digest"],
+  "additionalProperties": false,
+  "required": ["contract", "schema_version", "generated_at", "identity", "status", "code", "kind", "message", "paths", "errors", "formal_release_effect", "formal_release_allowed", "retained_for_ledger", "decision_digest"],
   "properties": {
-    "contract": { "const": "change-evidence-report@1.0" },
-    "schema_version": { "const": "1.0" },
-    "status": { "enum": ["ELIGIBLE", "EXCLUDED", "BLOCKED", "STOP_TRIGGERED"] },
-    "code": { "type": "string", "minLength": 1 },
-    "errors": { "type": "array", "items": { "type": "string" } },
-    "formal_release_effect": { "const": "NONE" },
-    "formal_release_allowed": { "const": false },
-    "decision_digest": { "type": "string", "minLength": 1 }
+    "contract": { "const": "change-evidence-report@1.0" }, "schema_version": { "const": "1.0" }, "generated_at": { "type": "string", "minLength": 1 },
+    "identity": { "$ref": "#/$defs/identity" }, "status": { "enum": ["ELIGIBLE", "EXCLUDED", "BLOCKED", "STOP_TRIGGERED"] }, "code": { "type": "string", "minLength": 1 },
+    "kind": { "const": "pilot_evidence_report" }, "message": { "type": "string" }, "paths": { "type": "array", "items": { "type": "string" } }, "errors": { "type": "array", "items": { "type": "string" } },
+    "formal_release_effect": { "const": "NONE" }, "formal_release_allowed": { "const": false }, "retained_for_ledger": { "type": "boolean" }, "decision_digest": { "type": "string", "minLength": 1 },
+    "compatibility": { "$ref": "#/$defs/compatibility" }, "catalog_readiness": { "$ref": "#/$defs/readiness" }, "raw_gate": { "type": ["string", "null"] }, "raw_release_allowed": { "type": ["boolean", "null"] },
+    "blocking_checks": { "type": "array", "items": { "type": "string" } }, "draft_digest": { "type": ["string", "null"] }, "adjudication_digest": { "type": ["string", "null"] },
+    "input_digests": { "$ref": "#/$defs/digests" }, "recomputed_digests": { "$ref": "#/$defs/digests" }, "attempt_ids": { "type": "array", "items": { "type": "string" } }
+  },
+  "$defs": {
+    "identity": {
+      "type": "object", "additionalProperties": false, "required": ["pilot_id", "iteration_id", "change_id", "run_id", "change_ref", "version_type"],
+      "properties": { "pilot_id": { "type": "string", "minLength": 1 }, "iteration_id": { "type": "string", "minLength": 1 }, "change_id": { "type": "string", "minLength": 1 }, "run_id": { "type": "string", "minLength": 1 }, "change_ref": { "type": "string", "minLength": 1 }, "version_type": { "enum": ["daily", "hotfix", "major"] } }
+    },
+    "matrix": {
+      "type": "object", "additionalProperties": false,
+      "required": ["manifest", "catalog", "agent_spec", "agent_run", "pilot_evidence", "difference_draft", "adjudication", "change_report", "ledger", "qualityctl"],
+      "properties": { "manifest": { "type": "string" }, "catalog": { "type": "string" }, "agent_spec": { "type": "string" }, "agent_run": { "type": "string" }, "pilot_evidence": { "type": "string" }, "difference_draft": { "type": "string" }, "adjudication": { "type": "string" }, "change_report": { "type": "string" }, "ledger": { "type": "string" }, "qualityctl": { "type": "string" } }
+    },
+    "compatibility": {
+      "type": "object", "additionalProperties": false, "required": ["ok", "kind", "status", "code", "message", "paths", "errors", "matrix", "formal_release_effect"],
+      "properties": { "ok": { "type": "boolean" }, "kind": { "const": "pilot_compatibility" }, "status": { "enum": ["COMPATIBLE", "BLOCKED"] }, "code": { "type": "string" }, "message": { "type": "string" }, "paths": { "type": "array", "items": { "type": "string" } }, "errors": { "type": "array", "items": { "type": "string" } }, "matrix": { "$ref": "#/$defs/matrix" }, "formal_release_effect": { "const": "NONE" } }
+    },
+    "readiness": {
+      "type": "object", "additionalProperties": false, "required": ["ok", "kind", "status", "code", "message", "paths", "errors", "formal_release_effect"],
+      "properties": { "ok": { "type": "boolean" }, "kind": { "const": "catalog_readiness" }, "status": { "enum": ["READY", "BLOCKED"] }, "code": { "type": "string" }, "message": { "type": "string" }, "paths": { "type": "array", "items": { "type": "string" } }, "errors": { "type": "array", "items": { "type": "string" } }, "catalog_count": { "type": ["integer", "null"] }, "catalog_version": { "type": ["string", "null"] }, "source_ref": { "type": ["string", "null"] }, "reviewer_ids": { "type": "array", "items": { "type": "string" } }, "oracle_covered_count": { "type": ["integer", "null"] }, "dimension_coverage": { "type": "array", "items": { "type": "string" } }, "historical_escape_refs": { "type": "array", "items": { "type": "string" } }, "formal_release_effect": { "const": "NONE" } }
+    },
+    "digests": {
+      "type": "object", "additionalProperties": false,
+      "properties": { "manifest": { "type": ["string", "null"] }, "catalog": { "type": ["string", "null"] }, "agent_spec": { "type": ["string", "null"] }, "agent_runs": { "type": ["string", "null"] } }
+    }
   }
 }

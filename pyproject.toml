@@ -15,6 +15,11 @@ dependencies = [
     "pydantic>=2,<3",
 ]
 
+[project.optional-dependencies]
+test = [
+    "jsonschema==4.26.0",
+]
+
 [project.scripts]
 qualityctl = "qualityctl.cli:main"
 qualityctl-mcp = "qualityctl.mcp_server:main"

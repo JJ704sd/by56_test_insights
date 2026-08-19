@@ -3,16 +3,27 @@
   "$id": "https://qualityctl.dev/schemas/v1/evidence-ledger.schema.json",
   "title": "Frozen Evidence Ledger v1.0",
   "type": "object",
-  "additionalProperties": true,
-  "required": ["contract", "status", "entries", "attempts", "conflicts", "formal_release_effect", "decision_digest"],
+  "additionalProperties": false,
+  "required": ["contract", "schema_version", "status", "pilot_id", "iteration_id", "entries", "attempts", "conflicts", "formal_release_effect", "decision_digest"],
   "properties": {
-    "contract": { "const": "evidence-ledger@1.0" },
-    "schema_version": { "const": "1.0" },
-    "status": { "enum": ["FROZEN", "BLOCKED"] },
-    "entries": { "type": "array" },
-    "attempts": { "type": "array" },
-    "conflicts": { "type": "array", "items": { "type": "string" } },
-    "formal_release_effect": { "const": "NONE" },
-    "decision_digest": { "type": "string", "minLength": 1 }
+    "contract": { "const": "evidence-ledger@1.0" }, "schema_version": { "const": "1.0" }, "status": { "enum": ["FROZEN", "BLOCKED"] },
+    "pilot_id": { "type": "string", "minLength": 1 }, "iteration_id": { "type": "string", "minLength": 1 },
+    "entries": { "type": "array", "items": { "$ref": "#/$defs/entry" } }, "attempts": { "type": "array", "items": { "$ref": "#/$defs/attempt" } },
+    "conflicts": { "type": "array", "items": { "type": "string" } }, "formal_release_effect": { "const": "NONE" }, "decision_digest": { "type": "string", "minLength": 1 }, "generated_at": { "type": ["string", "null"] },
+    "eligible_count": { "type": ["integer", "null"], "minimum": 0 }, "excluded_count": { "type": ["integer", "null"], "minimum": 0 },
+    "kind": { "const": "evidence_ledger" }, "message": { "type": ["string", "null"] }, "paths": { "type": "array", "items": { "type": "string" } },
+    "eligible_change_ids": { "type": "array", "items": { "type": "string" } }, "excluded_change_ids": { "type": "array", "items": { "type": "string" } }
+  },
+  "$defs": {
+    "entry": {
+      "type": "object", "additionalProperties": false,
+      "required": ["pilot_id", "iteration_id", "change_id", "run_id", "status", "evidence_digest"],
+      "properties": { "pilot_id": { "type": "string", "minLength": 1 }, "iteration_id": { "type": "string", "minLength": 1 }, "change_id": { "type": "string", "minLength": 1 }, "run_id": { "type": "string", "minLength": 1 }, "status": { "enum": ["ELIGIBLE", "EXCLUDED", "BLOCKED", "STOP_TRIGGERED"] }, "evidence_digest": { "type": "string", "minLength": 1 }, "attempt_ids": { "type": "array", "items": { "type": "string", "minLength": 1 } }, "out_of_plan": { "type": "boolean" }, "report_ref": { "type": ["string", "null"] } }
+    },
+    "attempt": {
+      "type": "object", "additionalProperties": false,
+      "required": ["pilot_id", "iteration_id", "change_id", "run_id", "attempt_id", "kind", "out_of_plan", "digest", "started_at", "ended_at", "status", "ref"],
+      "properties": { "pilot_id": { "type": "string", "minLength": 1 }, "iteration_id": { "type": "string", "minLength": 1 }, "change_id": { "type": "string", "minLength": 1 }, "run_id": { "type": "string", "minLength": 1 }, "attempt_id": { "type": "string", "minLength": 1 }, "kind": { "type": "string", "minLength": 1 }, "out_of_plan": { "type": "boolean" }, "digest": { "type": "string", "minLength": 1 }, "started_at": { "type": "string", "minLength": 1 }, "ended_at": { "type": "string", "minLength": 1 }, "status": { "type": "string", "minLength": 1 }, "ref": { "type": "string", "minLength": 1 }, "initial_attempt_ref": { "type": ["string", "null"] } }
+    }
   }
 }

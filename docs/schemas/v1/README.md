@@ -148,6 +148,33 @@ new reports with exclusive-create. Every Pilot output has
 becomes a formal release action. During the current `BLOCKED_BY_R2_G0` phase,
 only an explicit `FIXTURE_DRY_RUN` bundle may be verified.
 
+### P1b frozen iteration contracts
+
+P1b adds strict, append-only-derived contracts for the local fixture path:
+
+| Contract | Pydantic seam | JSON Schema |
+| --- | --- | --- |
+| `change-evidence-report@1.0` | `validate_change_evidence_report` | [`change-evidence-report.schema.json`](../../../src/qualityctl/schemas/v1/change-evidence-report.schema.json) |
+| `evidence-ledger@1.0` | `validate_evidence_ledger` | [`evidence-ledger.schema.json`](../../../src/qualityctl/schemas/v1/evidence-ledger.schema.json) |
+| `iteration-index@1.0` | `validate_iteration_index` | [`iteration-index.schema.json`](../../../src/qualityctl/schemas/v1/iteration-index.schema.json) |
+| `iteration-summary@1.0` | `validate_iteration_summary` | [`iteration-summary.schema.json`](../../../src/qualityctl/schemas/v1/iteration-summary.schema.json) |
+
+All four contracts reject unknown fields at their nested object boundaries.
+The iteration core verifies local bytes digests and base-directory containment,
+recomputes change eligibility from the bundle, and only accepts the exact P1b
+fixture matrix (`qualityctl 0.1.0`, baseline commit, schema `1.0`,
+`canonical-json@1.0`, and the pinned fixture policy versions). It treats
+`PENDING`/`UNKNOWN` attestations as non-success and keeps
+`OBSERVED`/`NOT_OBSERVED`/`NOT_COMPUTABLE`/`BLOCKED` distinct. A valid fixture
+summary is not a release gate and never creates a business denominator.
+
+Pilot raw `manifest`、`catalog`、`agent_spec` 和 JSONL `agent_runs` 可以保持 inline，或使用
+完整的 `{path, media_type, size, digest}` artifact ref。四类 ref 共享同一个 local resolver：
+拒绝绝对路径、`..` 和解析后逃出 `base_dir` 的 symlink/junction，在解析 JSON/JSONL 前核对
+stat size、实际 bytes 长度、media type 和 SHA-256。manual/tool scope 的重复 test ID 返回
+`BLOCKED/DUPLICATE_SCOPE_ID`，不会再由 map 静默保留最后一项。JSON Schema parity 依赖由
+`.[test]` extra 提供，不增加 production runtime dependency。
+
 ## References
 
 - `docs/plugin-developer-guide.md §10` — productization roadmap

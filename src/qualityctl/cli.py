@@ -14,6 +14,7 @@ from .evidence import (
     verify_change_bundle,
     write_json_exclusive,
 )
+from .iteration import summarize_iteration
 from .io import read_json, read_jsonl, write_json
 from .risk import validate_risk_manifest
 from .selection import select_regression_tests
@@ -122,6 +123,8 @@ def _run_evidence_command(args: argparse.Namespace) -> int:
             result = draft_difference(payload, base_dir=Path(input_path).parent)
         elif args.evidence_command == "validate-adjudication":
             result = validate_adjudication_record(payload)
+        elif args.evidence_command == "summarize-iteration":
+            result = summarize_iteration(payload, base_dir=Path(input_path).parent)
         else:
             result = freeze_ledger(payload)
     except (OSError, ValueError, TypeError, KeyError) as exc:
@@ -190,6 +193,7 @@ def build_parser() -> argparse.ArgumentParser:
         ("draft-diff", "draft a machine-only manual/tool scope difference"),
         ("validate-adjudication", "validate an authorized difference adjudication"),
         ("freeze-ledger", "freeze eligible, excluded, and attempt ledger entries"),
+        ("summarize-iteration", "summarize one frozen iteration index"),
     ):
         child = evidence_subparsers.add_parser(name, help=help_text)
         child.add_argument("input")

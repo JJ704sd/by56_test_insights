@@ -23,7 +23,6 @@ from typing import Any, Literal
 from pydantic import BaseModel, ConfigDict, Field, ValidationError, model_validator
 
 from .gate import decide_quality_gate
-from .io import read_json, read_jsonl
 from .risk import RISK_DIMENSIONS
 from .selection import select_regression_tests
 from .validation import (
@@ -59,6 +58,14 @@ PILOT_COMPATIBILITY_MATRIX = {
     "change_report": "1.0",
     "ledger": "1.0",
     "qualityctl": "0.1.x",
+}
+PILOT_APPROVED_CORE_VERSION = "0.1.0"
+PILOT_APPROVED_CORE_COMMIT = "ff11ddb7615ede298d26e2d5b7e3bc5d75664bc6"
+ATTESTATION_SUCCESS_ALLOWLIST = {
+    "secret_scan": "PASS",
+    "controlled_storage": "PASS",
+    "formal_result": "RECORDED",
+    "least_privilege": "PASS",
 }
 
 
@@ -149,8 +156,8 @@ class EvidenceIdentityV1(EvidenceModel):
 
 
 class EvidenceVersionsV1(EvidenceModel):
-    core_version: str | None = Field(default=None, min_length=1)
-    core_commit: str | None = Field(default=None, min_length=1)
+    core_version: str = Field(min_length=1)
+    core_commit: str = Field(min_length=1)
     python_version: str = Field(min_length=1)
     input_schema_versions: dict[str, str] = Field(min_length=1)
     catalog_version: str = Field(min_length=1)
@@ -161,13 +168,6 @@ class EvidenceVersionsV1(EvidenceModel):
     agent_spec_digest: str | None = Field(default=None, min_length=1)
     frozen_agent_digest: str | None = Field(default=None, min_length=1)
     agent_fingerprint_digest: str | None = Field(default=None, min_length=1)
-
-    @model_validator(mode="after")
-    def _core_identity_required(self) -> "EvidenceVersionsV1":
-        if not self.core_version and not self.core_commit:
-            raise ValueError("versions requires core_version or core_commit")
-        return self
-
 
 class FreezeV1(EvidenceModel):
     scope_ref: str = Field(min_length=1)
@@ -220,12 +220,23 @@ class AttestationV1(EvidenceModel):
 
 
 class RawEvidenceV1(EvidenceModel):
-    manifest: dict[str, Any]
-    catalog: dict[str, Any]
-    agent_spec: dict[str, Any] | None = None
-    agent_runs: list[dict[str, Any]] | None = None
+    manifest: dict[str, Any] | ArtifactRefV1
+    catalog: dict[str, Any] | ArtifactRefV1
+    agent_spec: dict[str, Any] | ArtifactRefV1 | None = None
+    agent_runs: list[dict[str, Any]] | ArtifactRefV1 | None = None
     tool_scope: dict[str, Any] | list[Any] | None = None
     formal_result: dict[str, Any] | None = None
+
+    @model_validator(mode="before")
+    @classmethod
+    def _artifact_refs_are_complete(cls, value: Any) -> Any:
+        if not isinstance(value, Mapping):
+            return value
+        for key in ("manifest", "catalog", "agent_spec", "agent_runs"):
+            candidate = value.get(key)
+            if isinstance(candidate, Mapping) and "path" in candidate:
+                ArtifactRefV1.model_validate(candidate)
+        return value
 
 
 class PilotEvidenceBundleV1(EvidenceModel):
@@ -272,7 +283,9 @@ class DifferenceItemV1(EvidenceModel):
 
 class DifferenceDraftV1(EvidenceModel):
     contract: str = Field(min_length=1)
-    status: Literal["DRAFT"] = "DRAFT"
+    status: Literal["DRAFT", "BLOCKED"] = "DRAFT"
+    code: str | None = Field(default=None, min_length=1)
+    errors: list[str] = Field(default_factory=list)
     identity: dict[str, str] | None = None
     manual_scope: dict[str, Any] | list[Any]
     tool_scope: dict[str, Any] | list[Any]
@@ -293,9 +306,15 @@ class AdjudicationItemV1(EvidenceModel):
     adjudicated_at: str = Field(min_length=1)
 
 
+class AdjudicationIdentityV1(EvidenceModel):
+    pilot_id: str = Field(min_length=1)
+    change_id: str = Field(min_length=1)
+    run_id: str = Field(min_length=1)
+
+
 class AdjudicationV1(EvidenceModel):
     contract: str = Field(min_length=1)
-    identity: dict[str, str]
+    identity: AdjudicationIdentityV1
     difference_draft_digest: str = Field(min_length=1)
     items: list[AdjudicationItemV1]
     reviewer_id: str = Field(min_length=1)
@@ -462,6 +481,12 @@ def check_pilot_compatibility(bundle: Mapping[str, Any]) -> dict[str, Any]:
 
     versions = bundle.get("versions")
     versions = versions if isinstance(versions, Mapping) else {}
+    core_version = _version(versions.get("core_version"))
+    core_commit = _version(versions.get("core_commit"))
+    if core_version != PILOT_APPROVED_CORE_VERSION:
+        errors.append(f"core version {core_version!r} is not approved")
+    if core_commit != PILOT_APPROVED_CORE_COMMIT:
+        errors.append(f"core commit {core_commit!r} is not approved")
     schema_versions = versions.get("input_schema_versions")
     schema_versions = schema_versions if isinstance(schema_versions, Mapping) else {}
     for kind in ("manifest", "catalog"):
@@ -506,11 +531,16 @@ def check_pilot_compatibility(bundle: Mapping[str, Any]) -> dict[str, Any]:
             errors.append("raw agent_runs is required by the manifest policy")
 
     ok = not errors
+    code = "OK"
+    if any(error.startswith("core version") or error.startswith("core commit") for error in errors):
+        code = "UNSUPPORTED_CORE"
+    elif errors:
+        code = "UNSUPPORTED_SCHEMA"
     return {
         "ok": ok,
         "kind": "pilot_compatibility",
         "status": "COMPATIBLE" if ok else "BLOCKED",
-        "code": "OK" if ok else "UNSUPPORTED_SCHEMA",
+        "code": code,
         "message": errors[0] if errors else "pinned compatibility matrix passed",
         "paths": [],
         "errors": errors,
@@ -639,7 +669,7 @@ def _parse_time(value: Any, label: str, errors: list[str]) -> datetime | None:
     return parsed
 
 
-def _scope_items(scope: Any) -> dict[str, Mapping[str, Any]]:
+def _scope_items(scope: Any) -> tuple[dict[str, Mapping[str, Any]], list[str]]:
     if isinstance(scope, Mapping):
         for key in ("selected_test_ids", "selected", "selected_tests", "tests"):
             if key in scope:
@@ -650,16 +680,27 @@ def _scope_items(scope: Any) -> dict[str, Mapping[str, Any]]:
     else:
         value = scope
     if not isinstance(value, Sequence) or isinstance(value, (bytes, bytearray, str)):
-        return {}
+        return {}, []
     result: dict[str, Mapping[str, Any]] = {}
+    duplicates: list[str] = []
     for item in value:
+        identifier: str | None = None
+        normalized: Mapping[str, Any] | None = None
         if isinstance(item, str) and item.strip():
-            result[item.strip()] = {"test_id": item.strip()}
+            identifier = item.strip()
+            normalized = {"test_id": identifier}
         elif isinstance(item, Mapping):
-            identifier = item.get("test_id") or item.get("id")
-            if isinstance(identifier, str) and identifier.strip():
-                result[identifier.strip()] = item
-    return result
+            raw_identifier = item.get("test_id") or item.get("id")
+            if isinstance(raw_identifier, str) and raw_identifier.strip():
+                identifier = raw_identifier.strip()
+                normalized = item
+        if identifier is None or normalized is None:
+            continue
+        if identifier in result:
+            duplicates.append(identifier)
+            continue
+        result[identifier] = normalized
+    return result, sorted(set(duplicates))
 
 
 def compare_scopes(
@@ -670,8 +711,28 @@ def compare_scopes(
 ) -> dict[str, Any]:
     """Produce a deterministic scope difference draft without classifications."""
 
-    manual = _scope_items(manual_scope)
-    tool = _scope_items(tool_scope)
+    manual, manual_duplicates = _scope_items(manual_scope)
+    tool, tool_duplicates = _scope_items(tool_scope)
+    duplicate_errors = [
+        *(f"manual scope contains duplicate test_id: {test_id}" for test_id in manual_duplicates),
+        *(f"tool scope contains duplicate test_id: {test_id}" for test_id in tool_duplicates),
+    ]
+    if duplicate_errors:
+        blocked = {
+            "contract": "difference-draft@1.0",
+            "status": "BLOCKED",
+            "code": "DUPLICATE_SCOPE_ID",
+            "errors": duplicate_errors,
+            "identity": dict(identity) if identity is not None else None,
+            "manual_scope": deepcopy(manual_scope),
+            "tool_scope": deepcopy(tool_scope),
+            "differences": [],
+            "counts": {"manual_only": 0, "tool_only": 0, "total": 0},
+            "generated_at": datetime.now(timezone.utc).isoformat(),
+            "formal_release_effect": FORMAL_RELEASE_EFFECT,
+        }
+        blocked["decision_digest"] = canonical_digest(blocked, purpose="decision")
+        return blocked
     differences: list[dict[str, Any]] = []
     for test_id in sorted(set(manual) - set(tool)):
         source = manual[test_id]
@@ -726,6 +787,8 @@ def _adjudication_status(
     payload: Mapping[str, Any],
     *,
     expected_difference_ids: set[str] | None = None,
+    expected_identity: Mapping[str, str] | None = None,
+    expected_draft_digest: str | None = None,
 ) -> dict[str, Any]:
     validation = validate_adjudication(payload)
     if not validation.ok:
@@ -742,7 +805,7 @@ def _adjudication_status(
     model = validation.model
     assert isinstance(model, AdjudicationV1)
     errors: list[str] = []
-    identity = model.identity
+    identity = model.identity.model_dump()
     name, version = _contract_version(model.contract)
     if name != "adjudication" or version != "1.0":
         errors.append("adjudication contract must be adjudication@1.0")
@@ -756,6 +819,38 @@ def _adjudication_status(
             "paths": [],
             "errors": ["formal_release_effect must remain NONE"],
             "formal_release_effect": FORMAL_RELEASE_EFFECT,
+        }
+    if expected_identity is not None:
+        actual_identity = dict(identity)
+        expected = {
+            key: str(expected_identity.get(key, ""))
+            for key in ("pilot_id", "change_id", "run_id")
+        }
+        if set(actual_identity) != set(expected) or actual_identity != expected:
+            return {
+                "ok": False,
+                "kind": "adjudication_validation",
+                "status": "BLOCKED",
+                "code": "ADJUDICATION_IDENTITY_MISMATCH",
+                "message": "adjudication identity does not match the bundle",
+                "paths": ["identity"],
+                "errors": ["adjudication identity must exactly match bundle pilot_id/change_id/run_id"],
+                "identity": deepcopy(identity),
+                "formal_release_effect": FORMAL_RELEASE_EFFECT,
+                "decision_digest": canonical_digest(model.model_dump(), purpose="decision"),
+            }
+    if expected_draft_digest is not None and model.difference_draft_digest != expected_draft_digest:
+        return {
+            "ok": False,
+            "kind": "adjudication_validation",
+            "status": "BLOCKED",
+            "code": "ADJUDICATION_DIGEST_MISMATCH",
+            "message": "adjudication difference_draft_digest does not match the recomputed draft",
+            "paths": ["difference_draft_digest"],
+            "errors": ["adjudication difference_draft_digest is stale or from another scope"],
+            "identity": deepcopy(identity),
+            "formal_release_effect": FORMAL_RELEASE_EFFECT,
+            "decision_digest": canonical_digest(model.model_dump(), purpose="decision"),
         }
     item_ids = {item.difference_id for item in model.items}
     if expected_difference_ids is not None and item_ids != expected_difference_ids:
@@ -840,57 +935,98 @@ def validate_adjudication_record(payload: Any) -> dict[str, Any]:
     return _adjudication_status(payload)
 
 
+def _parse_jsonl_bytes(data: bytes, label: str) -> list[dict[str, Any]]:
+    try:
+        text = data.decode("utf-8")
+    except UnicodeDecodeError as exc:
+        raise ValueError(f"{label}: invalid UTF-8: {exc}") from exc
+    records: list[dict[str, Any]] = []
+    for line_number, raw_line in enumerate(text.splitlines(), start=1):
+        line = raw_line.strip()
+        if not line:
+            continue
+        try:
+            record = json.loads(line)
+        except json.JSONDecodeError as exc:
+            raise ValueError(f"{label}:{line_number}: invalid JSON: {exc}") from exc
+        if not isinstance(record, dict):
+            raise ValueError(f"{label}:{line_number}: each JSONL row must be an object")
+        records.append(record)
+    return records
+
+
+def _resolve_raw_artifact(
+    key: str,
+    value: Mapping[str, Any],
+    base_dir: Path | None,
+) -> tuple[Any | None, str | None]:
+    try:
+        reference = ArtifactRefV1.model_validate(value)
+    except ValidationError as exc:
+        return None, f"{key} artifact reference is invalid: {'; '.join(_flatten_errors(exc))}"
+    if base_dir is None:
+        return None, f"{key} external artifact requires an explicit base_dir"
+
+    requested = Path(reference.path)
+    if requested.is_absolute() or any(part == ".." for part in requested.parts):
+        return None, f"{key} path escapes base_dir: {reference.path}"
+    try:
+        root = base_dir.resolve(strict=True)
+        path = (root / requested).resolve(strict=True)
+        path.relative_to(root)
+    except (OSError, RuntimeError, ValueError) as exc:
+        return None, f"{key} path is unsafe or unavailable: {reference.path}: {exc}"
+    if not path.is_file():
+        return None, f"{key} path is not a regular file: {reference.path}"
+
+    try:
+        actual_size = path.stat().st_size
+    except OSError as exc:
+        return None, f"{key} stat failed: {exc}"
+    if actual_size != reference.size:
+        return None, f"{key} size mismatch: expected {reference.size}, got {actual_size}"
+    try:
+        data = path.read_bytes()
+    except OSError as exc:
+        return None, f"{key} read failed: {exc}"
+    if len(data) != reference.size:
+        return None, f"{key} size changed while reading: expected {reference.size}, got {len(data)}"
+    actual_digest = bytes_digest(data)
+    if actual_digest != reference.digest:
+        return None, f"{key} digest mismatch: expected {reference.digest}, got {actual_digest}"
+
+    allowed_media_types = (
+        {"application/x-ndjson", "application/jsonl"}
+        if key == "agent_runs"
+        else {"application/json"}
+    )
+    if reference.media_type not in allowed_media_types:
+        return None, f"{key} media type is unsupported: {reference.media_type}"
+    try:
+        if key == "agent_runs":
+            return _parse_jsonl_bytes(data, reference.path), None
+        parsed = json.loads(data.decode("utf-8"))
+    except (UnicodeDecodeError, json.JSONDecodeError, ValueError) as exc:
+        return None, f"{key} read failed: {exc}"
+    if not isinstance(parsed, dict):
+        return None, f"{key} JSON artifact must contain an object"
+    return parsed, None
+
+
 def _load_raw_inputs(bundle: Mapping[str, Any], base_dir: Path | None) -> dict[str, Any]:
     raw = bundle.get("raw")
     raw = deepcopy(raw) if isinstance(raw, Mapping) else {}
     if isinstance(bundle.get("inputs"), Mapping):
         for key, value in bundle["inputs"].items():
             raw.setdefault(key, deepcopy(value))
-    if base_dir is None:
-        return raw
-    for key in ("manifest", "catalog", "agent_spec"):
+    for key in ("manifest", "catalog", "agent_spec", "agent_runs"):
         value = raw.get(key)
         if isinstance(value, Mapping) and isinstance(value.get("path"), str):
-            path = base_dir / value["path"]
-            try:
-                raw[key] = read_json(path)
-                file_size = path.stat().st_size
-            except (OSError, ValueError, TypeError) as exc:
-                raw.setdefault("_load_errors", []).append(f"{key} read failed: {exc}")
-                continue
-            expected_size = value.get("size")
-            if isinstance(expected_size, int) and file_size != expected_size:
-                raw.setdefault("_load_errors", []).append(
-                    f"{key} size mismatch: expected {expected_size}, got {path.stat().st_size}"
-                )
-            expected = value.get("digest")
-            if isinstance(expected, str):
-                actual = bytes_digest(path.read_bytes())
-                if actual != expected:
-                    raw.setdefault("_load_errors", []).append(
-                        f"{key} digest mismatch: expected {expected}, got {actual}"
-                    )
-    value = raw.get("agent_runs")
-    if isinstance(value, Mapping) and isinstance(value.get("path"), str):
-        path = base_dir / value["path"]
-        try:
-            raw["agent_runs"] = read_jsonl(path)
-            file_size = path.stat().st_size
-        except (OSError, ValueError, TypeError) as exc:
-            raw.setdefault("_load_errors", []).append(f"agent_runs read failed: {exc}")
-            return raw
-        expected_size = value.get("size")
-        if isinstance(expected_size, int) and file_size != expected_size:
-            raw.setdefault("_load_errors", []).append(
-                f"agent_runs size mismatch: expected {expected_size}, got {path.stat().st_size}"
-            )
-        expected = value.get("digest")
-        if isinstance(expected, str):
-            actual = bytes_digest(path.read_bytes())
-            if actual != expected:
-                raw.setdefault("_load_errors", []).append(
-                    f"agent_runs digest mismatch: expected {expected}, got {actual}"
-                )
+            resolved, error = _resolve_raw_artifact(key, value, base_dir)
+            if error is not None:
+                raw.setdefault("_load_errors", []).append(error)
+            else:
+                raw[key] = resolved
     return raw
 
 
@@ -1114,6 +1250,16 @@ def verify_change_bundle(
             raw_gate=None,
         )
 
+    load_errors = raw.get("_load_errors")
+    if isinstance(load_errors, list) and load_errors:
+        return _status_report(
+            bundle,
+            status="BLOCKED",
+            code="RAW_DIGEST_MISMATCH",
+            errors=[str(error) for error in load_errors],
+            raw_gate=None,
+        )
+
     compatibility = check_pilot_compatibility(bundle)
     if not compatibility["ok"]:
         return _status_report(
@@ -1138,12 +1284,7 @@ def verify_change_bundle(
             raw_gate=None,
         )
 
-    required_attestations = {
-        "secret_scan",
-        "controlled_storage",
-        "formal_result",
-        "least_privilege",
-    }
+    required_attestations = set(ATTESTATION_SUCCESS_ALLOWLIST)
     attestations = bundle.get("attestations")
     attestations = attestations if isinstance(attestations, Mapping) else {}
     missing_attestations = sorted(required_attestations - set(attestations))
@@ -1151,24 +1292,31 @@ def verify_change_bundle(
         return _status_report(
             bundle,
             status="BLOCKED",
-            code="MISSING_ATTESTATION",
+            code="ATTESTATION_NOT_APPROVED",
             errors=[f"required attestations missing: {missing_attestations}"],
             compatibility=compatibility,
             raw_gate=None,
         )
-    for name in ("controlled_storage", "formal_result", "least_privilege"):
+    for name, expected_status in ATTESTATION_SUCCESS_ALLOWLIST.items():
         attestation = attestations.get(name)
-        if not isinstance(attestation, Mapping) or str(attestation.get("status", "")).upper() in {
-            "FAIL",
-            "FAILED",
-            "UNSAFE",
-            "MISSING",
-        }:
+        if not isinstance(attestation, Mapping) or str(attestation.get("status", "")) != expected_status:
             return _status_report(
                 bundle,
                 status="BLOCKED",
-                code="ATTESTATION_NOT_READY",
-                errors=[f"attestation {name} is not ready"],
+                code="ATTESTATION_NOT_APPROVED",
+                errors=[f"attestation {name} must have exact success status {expected_status}"],
+                compatibility=compatibility,
+                raw_gate=None,
+            )
+        if not all(
+            isinstance(attestation.get(field), str) and attestation.get(field).strip()
+            for field in ("version", "ref", "digest")
+        ):
+            return _status_report(
+                bundle,
+                status="BLOCKED",
+                code="ATTESTATION_NOT_APPROVED",
+                errors=[f"attestation {name} requires version/ref/digest"],
                 compatibility=compatibility,
                 raw_gate=None,
             )
@@ -1272,18 +1420,6 @@ def verify_change_bundle(
             catalog_readiness=readiness.to_dict(),
             raw_gate=None,
         )
-    load_errors = raw.get("_load_errors")
-    if isinstance(load_errors, list) and load_errors:
-        return _status_report(
-            bundle,
-            status="BLOCKED",
-            code="RAW_DIGEST_MISMATCH",
-            errors=[str(error) for error in load_errors],
-            compatibility=compatibility,
-            catalog_readiness=readiness.to_dict(),
-            raw_gate=None,
-        )
-
     manifest = raw.get("manifest")
     catalog = raw.get("catalog")
     manifest_check = validate_manifest(manifest)
@@ -1388,6 +1524,18 @@ def verify_change_bundle(
         tool_scope or {},
         identity=bundle.get("identity") if isinstance(bundle.get("identity"), Mapping) else None,
     )
+    if draft.get("status") == "BLOCKED":
+        return _status_report(
+            bundle,
+            status="BLOCKED",
+            code=str(draft.get("code") or "DUPLICATE_SCOPE_ID"),
+            errors=[str(error) for error in draft.get("errors", [])],
+            compatibility=compatibility,
+            catalog_readiness=readiness.to_dict(),
+            raw_gate=gate.get("gate"),
+            raw_release_allowed=gate.get("release_allowed"),
+            draft_digest=draft["decision_digest"],
+        )
     adjudication = bundle.get("adjudication")
     if not isinstance(adjudication, Mapping):
         return _status_report(
@@ -1404,6 +1552,13 @@ def verify_change_bundle(
     adjudication_result = _adjudication_status(
         adjudication,
         expected_difference_ids={item["difference_id"] for item in draft["differences"]},
+        expected_identity={
+            key: bundle["identity"].get(key)
+            for key in ("pilot_id", "change_id", "run_id")
+        }
+        if isinstance(bundle.get("identity"), Mapping)
+        else None,
+        expected_draft_digest=draft["decision_digest"],
     )
     if adjudication_result["status"] == "STOP_TRIGGERED":
         return _status_report(
@@ -1517,7 +1672,7 @@ def freeze_ledger(index: Mapping[str, Any] | Sequence[Any]) -> dict[str, Any]:
                 for attempt in embedded_attempts:
                     if isinstance(attempt, Mapping):
                         enriched = deepcopy(dict(attempt))
-                        for key in ("pilot_id", "change_id", "run_id"):
+                        for key in ("pilot_id", "iteration_id", "change_id", "run_id"):
                             enriched.setdefault(key, entry.get(key))
                         attempts.append(enriched)
     conflicts: list[str] = []
@@ -1562,8 +1717,23 @@ def freeze_ledger(index: Mapping[str, Any] | Sequence[Any]) -> dict[str, Any]:
             duplicate_digests.add(digest)
         if digest:
             seen_digests.add(digest)
-        normalized = deepcopy(dict(entry))
+        normalized = {
+            key: deepcopy(entry[key])
+            for key in (
+                "pilot_id",
+                "iteration_id",
+                "change_id",
+                "run_id",
+                "status",
+                "evidence_digest",
+                "attempt_ids",
+                "out_of_plan",
+                "report_ref",
+            )
+            if key in entry
+        }
         normalized.setdefault("out_of_plan", False)
+        normalized.setdefault("attempt_ids", [])
         normalized_entries.append(normalized)
 
     seen_attempts: set[tuple[tuple[str, str, str], str]] = set()
@@ -1581,7 +1751,31 @@ def freeze_ledger(index: Mapping[str, Any] | Sequence[Any]) -> dict[str, Any]:
         if identity in seen_attempts:
             conflicts.append(f"duplicate attempt identity: {identity}")
         seen_attempts.add(identity)
-        normalized_attempts.append(deepcopy(dict(attempt)))
+        normalized_attempt = {
+            key: deepcopy(attempt[key])
+            for key in (
+                "pilot_id",
+                "iteration_id",
+                "change_id",
+                "run_id",
+                "attempt_id",
+                "kind",
+                "out_of_plan",
+                "digest",
+                "started_at",
+                "ended_at",
+                "status",
+                "ref",
+                "initial_attempt_ref",
+            )
+            if key in attempt
+        }
+        normalized_attempt.setdefault("out_of_plan", False)
+        if "iteration_id" not in normalized_attempt:
+            iteration_ids = {str(item.get("iteration_id", "")) for item in normalized_entries}
+            if len(iteration_ids) == 1:
+                normalized_attempt["iteration_id"] = next(iter(iteration_ids))
+        normalized_attempts.append(normalized_attempt)
 
     eligible = [
         item
@@ -1606,6 +1800,13 @@ def freeze_ledger(index: Mapping[str, Any] | Sequence[Any]) -> dict[str, Any]:
         "conflicts": sorted(set(conflicts)),
         "formal_release_effect": FORMAL_RELEASE_EFFECT,
     }
+    identities = {
+        (str(item.get("pilot_id", "")), str(item.get("iteration_id", "")))
+        for item in normalized_entries
+        if item.get("pilot_id") and item.get("iteration_id")
+    }
+    if len(identities) == 1:
+        stable["pilot_id"], stable["iteration_id"] = next(iter(identities))
     output = {
         **stable,
         "status": "BLOCKED" if conflicts else "FROZEN",
@@ -1622,6 +1823,7 @@ def freeze_ledger(index: Mapping[str, Any] | Sequence[Any]) -> dict[str, Any]:
 
 __all__ = [
     "ADJUDICATION_CLASSES",
+    "ATTESTATION_SUCCESS_ALLOWLIST",
     "ArtifactRefV1",
     "Adjudication",
     "AttestationV1",
@@ -1632,6 +1834,8 @@ __all__ = [
     "EvidenceVersionsV1",
     "FORMAL_RELEASE_EFFECT",
     "PILOT_COMPATIBILITY_MATRIX",
+    "PILOT_APPROVED_CORE_COMMIT",
+    "PILOT_APPROVED_CORE_VERSION",
     "PILOT_EVIDENCE_SCHEMA_VERSION",
     "PilotEvidenceBundleV1",
     "PilotEvidenceBundle",
@@ -1660,6 +1864,17 @@ __all__ = [
     "verify_change",
     "verify_change_bundle",
     "write_json_exclusive",
+    "ChangeEvidenceReportV1",
+    "EvidenceLedgerV1",
+    "IterationIndexV1",
+    "IterationSummaryV1",
+    "MetricResultV1",
+    "PolicyRefV1",
+    "validate_change_evidence_report",
+    "validate_evidence_ledger",
+    "validate_iteration_index",
+    "validate_iteration_summary",
+    "summarize_iteration",
 ]
 
 
@@ -1673,3 +1888,31 @@ draft_diff = draft_difference
 build_frozen_ledger = freeze_ledger
 exclusive_create_json = write_json_exclusive
 compute_digest = canonical_digest
+
+
+def __getattr__(name: str) -> Any:
+    """Lazily expose P1b contracts without creating an import cycle.
+
+    The original Pilot API lives in this module.  P1b keeps its iteration
+    implementation in ``iteration.py`` but makes the strict contracts
+    discoverable from the original evidence namespace for existing callers.
+    """
+
+    delegated = {
+        "ChangeEvidenceReportV1",
+        "EvidenceLedgerV1",
+        "IterationIndexV1",
+        "IterationSummaryV1",
+        "MetricResultV1",
+        "PolicyRefV1",
+        "validate_change_evidence_report",
+        "validate_evidence_ledger",
+        "validate_iteration_index",
+        "validate_iteration_summary",
+        "summarize_iteration",
+    }
+    if name in delegated:
+        from . import iteration
+
+        return getattr(iteration, name)
+    raise AttributeError(name)

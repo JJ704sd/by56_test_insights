@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import copy
+import hashlib
 import json
 import os
 import subprocess
@@ -8,6 +9,8 @@ import sys
 import tempfile
 import unittest
 from pathlib import Path
+
+from jsonschema import Draft7Validator
 
 from qualityctl.evidence import (
     FORMAL_RELEASE_EFFECT,
@@ -17,6 +20,7 @@ from qualityctl.evidence import (
     freeze_ledger,
     validate_adjudication_record,
     validate_catalog_readiness,
+    validate_difference_draft,
     validate_pilot_evidence_bundle,
     verify_change_bundle,
     write_json_exclusive,
@@ -42,6 +46,46 @@ def _load_runs() -> list[dict]:
         .splitlines()
         if line.strip()
     ]
+
+
+def _write_raw_reference(root: Path, name: str, value: object) -> dict:
+    path = root / name
+    if name.endswith(".jsonl"):
+        assert isinstance(value, list)
+        data = (
+            "\n".join(
+                json.dumps(item, ensure_ascii=False, sort_keys=True)
+                for item in value
+            )
+            + "\n"
+        ).encode("utf-8")
+        media_type = "application/x-ndjson"
+    else:
+        data = json.dumps(
+            value,
+            ensure_ascii=False,
+            sort_keys=True,
+            separators=(",", ":"),
+        ).encode("utf-8")
+        media_type = "application/json"
+    path.write_bytes(data)
+    return {
+        "path": name,
+        "media_type": media_type,
+        "size": len(data),
+        "digest": f"sha256:{hashlib.sha256(data).hexdigest()}",
+    }
+
+
+def _externalize_raw_inputs(bundle: dict, root: Path) -> dict[str, dict]:
+    references = {
+        "manifest": _write_raw_reference(root, "manifest.json", bundle["raw"]["manifest"]),
+        "catalog": _write_raw_reference(root, "catalog.json", bundle["raw"]["catalog"]),
+        "agent_spec": _write_raw_reference(root, "agent-spec.json", bundle["raw"]["agent_spec"]),
+        "agent_runs": _write_raw_reference(root, "agent-runs.jsonl", bundle["raw"]["agent_runs"]),
+    }
+    bundle["raw"].update(copy.deepcopy(references))
+    return references
 
 
 def _fixture_catalog() -> tuple[dict, dict]:
@@ -93,6 +137,7 @@ def _fixture_bundle() -> dict:
         },
         "versions": {
             "core_version": "0.1.0",
+            "core_commit": "ff11ddb7615ede298d26e2d5b7e3bc5d75664bc6",
             "python_version": "3.11",
             "input_schema_versions": {
                 "manifest": "1.0",
@@ -176,9 +221,18 @@ def _fixture_bundle() -> dict:
                 "change_id": "FIXTURE-CHANGE-001",
                 "run_id": "fixture-run-001",
             },
-            "difference_draft_digest": canonical_digest(
-                {"manual": manual_scope, "tool": manual_scope}
-            ),
+            "difference_draft_digest": compare_scopes(
+                manual_scope,
+                {"selected_test_ids": selected},
+                identity={
+                    "pilot_id": "fixture-pilot",
+                    "iteration_id": "fixture-iteration-001",
+                    "change_id": "FIXTURE-CHANGE-001",
+                    "run_id": "fixture-run-001",
+                    "change_ref": "fixture://change/001",
+                    "version_type": "daily",
+                },
+            )["decision_digest"],
             "items": [],
             "reviewer_id": "fixture-adjudicator",
             "reviewer_role": "test-owner",
@@ -198,6 +252,15 @@ def _fixture_bundle() -> dict:
 
 
 class PilotEvidenceContractTests(unittest.TestCase):
+    def test_test_extra_declares_jsonschema_for_reproducible_parity_checks(self) -> None:
+        pyproject = (ROOT / "pyproject.toml").read_text(encoding="utf-8")
+        self.assertIn("[project.optional-dependencies]", pyproject)
+        self.assertRegex(pyproject, r'(?m)^\s*"jsonschema[^"\n]*"')
+
+    def test_test_extra_pins_jsonschema_for_reproducible_parity_checks(self) -> None:
+        pyproject = (ROOT / "pyproject.toml").read_text(encoding="utf-8")
+        self.assertRegex(pyproject, r'(?m)^\s*"jsonschema==4\.26\.0",?\s*$')
+
     def test_canonicalization_lives_in_core_not_embedded_ui(self) -> None:
         source = (
             ROOT / "plugins" / "quality-gatekeeper" / "embedded_ui" / "view_model.py"
@@ -216,7 +279,34 @@ class PilotEvidenceContractTests(unittest.TestCase):
         schema = json.loads(path.read_text(encoding="utf-8"))
         self.assertEqual(schema["$id"], "https://qualityctl.dev/schemas/v1/pilot-evidence-bundle.schema.json")
         self.assertIn("identity", schema["required"])
+        self.assertIn("core_version", schema["$defs"]["versions"]["required"])
+        self.assertIn("core_commit", schema["$defs"]["versions"]["required"])
         self.assertFalse(schema["additionalProperties"])
+
+    def test_missing_exact_core_identity_is_blocked_before_compatibility_pass(self) -> None:
+        bundle = _fixture_bundle()
+        bundle["versions"].pop("core_commit")
+        structural = validate_pilot_evidence_bundle(bundle)
+        report = verify_change_bundle(bundle)
+        self.assertFalse(structural.ok)
+        self.assertEqual(report["status"], "BLOCKED")
+        self.assertEqual(report["code"], "INVALID_BUNDLE")
+
+    def test_external_raw_refs_have_pydantic_json_schema_parity(self) -> None:
+        schema = json.loads(
+            evidence_schema_path("pilot_evidence_bundle").read_text(encoding="utf-8")
+        )
+        validator = Draft7Validator(schema)
+        with tempfile.TemporaryDirectory() as directory:
+            bundle = _fixture_bundle()
+            _externalize_raw_inputs(bundle, Path(directory))
+            self.assertTrue(validate_pilot_evidence_bundle(bundle).ok)
+            self.assertEqual(list(validator.iter_errors(bundle)), [])
+
+            incomplete = copy.deepcopy(bundle)
+            incomplete["raw"]["agent_runs"].pop("digest")
+            self.assertFalse(validate_pilot_evidence_bundle(incomplete).ok)
+            self.assertTrue(list(validator.iter_errors(incomplete)))
 
     def test_unknown_major_is_a_compatibility_block_not_a_release_pass(self) -> None:
         bundle = _fixture_bundle()
@@ -302,8 +392,124 @@ class PilotEvidenceContractTests(unittest.TestCase):
         self.assertEqual(report["status"], "ELIGIBLE")
         self.assertEqual(report["raw_gate"], "PASS")
 
+    def test_all_raw_artifact_kinds_use_the_same_safe_resolver(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            bundle = _fixture_bundle()
+            references = _externalize_raw_inputs(bundle, root)
+            report = verify_change_bundle(bundle, base_dir=root)
+            self.assertEqual(report["status"], "ELIGIBLE", report.get("errors"))
+
+            for key in references:
+                with self.subTest(key=key, violation="size"):
+                    invalid = copy.deepcopy(bundle)
+                    invalid["raw"][key]["size"] += 1
+                    blocked = verify_change_bundle(invalid, base_dir=root)
+                    self.assertEqual(blocked["status"], "BLOCKED")
+                    self.assertTrue(
+                        any(f"{key} size mismatch" in error for error in blocked["errors"]),
+                        blocked["errors"],
+                    )
+                with self.subTest(key=key, violation="digest"):
+                    invalid = copy.deepcopy(bundle)
+                    invalid["raw"][key]["digest"] = "sha256:not-the-file-bytes"
+                    blocked = verify_change_bundle(invalid, base_dir=root)
+                    self.assertEqual(blocked["status"], "BLOCKED")
+                    self.assertTrue(
+                        any(f"{key} digest mismatch" in error for error in blocked["errors"]),
+                        blocked["errors"],
+                    )
+                with self.subTest(key=key, violation="parent-traversal"):
+                    invalid = copy.deepcopy(bundle)
+                    invalid["raw"][key]["path"] = f"../outside-{key}.json"
+                    blocked = verify_change_bundle(invalid, base_dir=root)
+                    self.assertEqual(blocked["status"], "BLOCKED")
+                    self.assertTrue(
+                        any(f"{key} path" in error for error in blocked["errors"]),
+                        blocked["errors"],
+                    )
+                with self.subTest(key=key, violation="absolute-path"):
+                    invalid = copy.deepcopy(bundle)
+                    invalid["raw"][key]["path"] = str(
+                        (root / references[key]["path"]).resolve()
+                    )
+                    blocked = verify_change_bundle(invalid, base_dir=root)
+                    self.assertEqual(blocked["status"], "BLOCKED")
+                    self.assertTrue(
+                        any(f"{key} path" in error for error in blocked["errors"]),
+                        blocked["errors"],
+                    )
+
+    def test_agent_runs_symlink_escape_is_blocked_before_read(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            container = Path(directory)
+            root = container / "evidence"
+            root.mkdir()
+            bundle = _fixture_bundle()
+            references = _externalize_raw_inputs(bundle, root)
+            outside = container / "outside-agent-runs.jsonl"
+            outside.write_bytes((root / references["agent_runs"]["path"]).read_bytes())
+            link = root / "agent-runs-link.jsonl"
+            try:
+                link.symlink_to(outside)
+            except OSError as exc:
+                outside_directory = container / "outside"
+                outside_directory.mkdir()
+                junction_target = outside_directory / "agent-runs.jsonl"
+                junction_target.write_bytes(outside.read_bytes())
+                junction = root / "outside-link"
+                created = subprocess.run(
+                    ["cmd", "/c", "mklink", "/J", str(junction), str(outside_directory)],
+                    capture_output=True,
+                    text=True,
+                )
+                if created.returncode != 0:
+                    self.skipTest(
+                        f"symlink and junction creation are unavailable: {exc}; {created.stderr}"
+                    )
+                bundle["raw"]["agent_runs"]["path"] = "outside-link/agent-runs.jsonl"
+            else:
+                bundle["raw"]["agent_runs"]["path"] = link.name
+
+            report = verify_change_bundle(bundle, base_dir=root)
+
+        self.assertEqual(report["status"], "BLOCKED")
+        self.assertTrue(
+            any("agent_runs path" in error for error in report["errors"]),
+            report["errors"],
+        )
+
 
 class PilotEvidenceWorkflowTests(unittest.TestCase):
+    def test_duplicate_manual_or_tool_scope_id_is_explicitly_blocked(self) -> None:
+        for side in ("manual", "tool"):
+            with self.subTest(side=side):
+                manual = {"selected_test_ids": ["T-1"]}
+                tool = {"selected_test_ids": ["T-1"]}
+                target = manual if side == "manual" else tool
+                target["selected_test_ids"].append("T-1")
+
+                draft = compare_scopes(manual, tool)
+                replayed = compare_scopes(manual, tool)
+
+                self.assertEqual(draft["status"], "BLOCKED")
+                self.assertEqual(draft["code"], "DUPLICATE_SCOPE_ID")
+                self.assertEqual(draft["decision_digest"], replayed["decision_digest"])
+                self.assertTrue(any(side in error for error in draft["errors"]))
+                self.assertTrue(validate_difference_draft(draft).ok)
+                schema = json.loads(
+                    evidence_schema_path("difference_draft").read_text(encoding="utf-8")
+                )
+                self.assertEqual(list(Draft7Validator(schema).iter_errors(draft)), [])
+
+        bundle = _fixture_bundle()
+        duplicate_id = bundle["manual_scope"]["selected_test_ids"][0]
+        bundle["manual_scope"]["selected_test_ids"].append(duplicate_id)
+        bundle["freeze"]["scope_digest"] = canonical_digest(bundle["manual_scope"])
+        report = verify_change_bundle(bundle)
+        self.assertEqual(report["status"], "BLOCKED")
+        self.assertEqual(report["code"], "DUPLICATE_SCOPE_ID")
+
     def test_verify_change_is_eligible_but_never_formally_releases(self) -> None:
         report = verify_change_bundle(_fixture_bundle())
         self.assertEqual(report["status"], "ELIGIBLE")

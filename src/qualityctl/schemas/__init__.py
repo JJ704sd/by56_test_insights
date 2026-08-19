@@ -24,6 +24,8 @@ SUPPORTED_EVIDENCE_SCHEMAS = (
     "adjudication",
     "change_evidence_report",
     "evidence_ledger",
+    "iteration_index",
+    "iteration_summary",
 )
 
 
@@ -49,6 +51,8 @@ def evidence_schema_path(kind: str) -> Path:
         "pilot_evidence": "pilot_evidence_bundle",
         "change_report": "change_evidence_report",
         "ledger": "evidence_ledger",
+        "iteration-index": "iteration_index",
+        "iteration-summary": "iteration_summary",
     }.get(kind, kind)
     if kind not in SUPPORTED_EVIDENCE_SCHEMAS:
         raise ValueError(
@@ -60,6 +64,8 @@ def evidence_schema_path(kind: str) -> Path:
         "adjudication": "adjudication.schema.json",
         "change_evidence_report": "change-evidence-report.schema.json",
         "evidence_ledger": "evidence-ledger.schema.json",
+        "iteration_index": "iteration-index.schema.json",
+        "iteration_summary": "iteration-summary.schema.json",
     }
     return V1_DIR / filenames[kind]
 

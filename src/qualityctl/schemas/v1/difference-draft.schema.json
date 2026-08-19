@@ -7,7 +7,9 @@
   "required": ["contract", "manual_scope", "tool_scope", "differences", "counts", "generated_at", "decision_digest"],
   "properties": {
     "contract": { "const": "difference-draft@1.0" },
-    "status": { "const": "DRAFT" },
+    "status": { "enum": ["DRAFT", "BLOCKED"] },
+    "code": { "type": ["string", "null"], "minLength": 1 },
+    "errors": { "type": "array", "items": { "type": "string" } },
     "identity": { "type": ["object", "null"] },
     "manual_scope": { "oneOf": [{ "type": "object" }, { "type": "array" }] },
     "tool_scope": { "oneOf": [{ "type": "object" }, { "type": "array" }] },

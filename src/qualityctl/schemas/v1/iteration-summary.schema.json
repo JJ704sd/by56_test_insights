@@ -1,0 +1,76 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://qualityctl.dev/schemas/v1/iteration-summary.schema.json",
+  "title": "Iteration Summary v1.0",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["contract", "schema_version", "status", "code", "errors", "identity", "evidence_class", "business_evidence", "versions", "policy", "denominator", "metrics", "roi", "stop_triggers", "conflicts", "missing_evidence", "source_refs", "source_digests", "formal_release_effect", "formal_release_allowed", "decision_digest", "generated_at"],
+  "allOf": [
+    {
+      "if": { "properties": { "evidence_class": { "const": "FIXTURE" } }, "required": ["evidence_class"] },
+      "then": { "properties": { "business_evidence": { "const": false } } }
+    },
+    {
+      "if": { "properties": { "evidence_class": { "const": "REAL" }, "status": { "const": "VALID" } }, "required": ["evidence_class", "status"] },
+      "then": { "properties": { "business_evidence": { "const": true } } }
+    },
+    {
+      "if": { "properties": { "evidence_class": { "const": "REAL" }, "status": { "enum": ["BLOCKED", "STOP_TRIGGERED"] } }, "required": ["evidence_class", "status"] },
+      "then": { "properties": { "business_evidence": { "const": false } } }
+    }
+  ],
+  "properties": {
+    "contract": { "const": "iteration-summary@1.0" }, "schema_version": { "const": "1.0" },
+    "status": { "enum": ["VALID", "BLOCKED", "STOP_TRIGGERED"] }, "code": { "type": "string", "minLength": 1 },
+    "errors": { "type": "array", "items": { "type": "string" } }, "identity": { "$ref": "#/$defs/identity" },
+    "evidence_class": { "enum": ["FIXTURE", "REAL"] }, "business_evidence": { "type": "boolean" },
+    "versions": { "$ref": "#/$defs/versions" }, "policy": { "$ref": "#/$defs/policy" },
+    "denominator": { "$ref": "#/$defs/denominator" }, "metrics": { "$ref": "#/$defs/metrics" }, "roi": { "$ref": "#/$defs/roi" },
+    "stop_triggers": { "type": "array", "items": { "type": "string" } }, "conflicts": { "type": "array", "items": { "type": "string" } },
+    "missing_evidence": { "type": "array", "items": { "type": "string" } }, "source_refs": { "type": "array", "items": { "type": "string" } },
+    "source_digests": { "type": "array", "items": { "type": "string" } }, "formal_release_effect": { "const": "NONE" },
+    "formal_release_allowed": { "const": false }, "decision_digest": { "type": "string", "minLength": 1 }, "generated_at": { "type": "string", "minLength": 1 }
+  },
+  "$defs": {
+    "identity": {
+      "type": "object", "additionalProperties": false, "required": ["pilot_id", "iteration_id", "evidence_class"],
+      "properties": { "pilot_id": { "type": "string", "minLength": 1 }, "iteration_id": { "type": "string", "minLength": 1 }, "evidence_class": { "enum": ["FIXTURE", "REAL"] } }
+    },
+    "schema_versions": {
+      "type": "object", "additionalProperties": false,
+      "required": ["pilot_evidence", "manifest", "catalog", "agent_spec", "agent_run", "difference_draft", "adjudication", "change_report", "ledger", "iteration_index", "iteration_summary"],
+      "properties": { "pilot_evidence": { "const": "1.0" }, "manifest": { "const": "1.0" }, "catalog": { "const": "1.0" }, "agent_spec": { "const": "1.0" }, "agent_run": { "const": "1.0" }, "difference_draft": { "const": "1.0" }, "adjudication": { "const": "1.0" }, "change_report": { "const": "1.0" }, "ledger": { "const": "1.0" }, "iteration_index": { "const": "1.0" }, "iteration_summary": { "const": "1.0" } }
+    },
+    "versions": {
+      "type": "object", "additionalProperties": false,
+      "required": ["schema_versions", "qualityctl_version", "core_version", "core_commit", "python_version", "catalog_version", "mapping_version", "threshold_version", "roi_policy_version", "canonicalization_version", "writer_reader_matrix", "matrix_approved_by", "matrix_approved_at", "matrix_valid_until"],
+      "properties": { "schema_versions": { "$ref": "#/$defs/schema_versions" }, "qualityctl_version": { "type": "string", "minLength": 1 }, "core_version": { "type": "string", "minLength": 1 }, "core_commit": { "type": "string", "minLength": 1 }, "python_version": { "type": "string", "minLength": 1 }, "catalog_version": { "type": "string", "minLength": 1 }, "mapping_version": { "type": "string", "minLength": 1 }, "threshold_version": { "type": "string", "minLength": 1 }, "roi_policy_version": { "type": "string", "minLength": 1 }, "canonicalization_version": { "type": "string", "minLength": 1 }, "writer_reader_matrix": { "type": "string", "minLength": 1 }, "matrix_approved_by": { "type": "string", "minLength": 1 }, "matrix_approved_at": { "type": "string", "minLength": 1 }, "matrix_valid_until": { "type": "string", "minLength": 1 } }
+    },
+    "costs": {
+      "type": "object", "additionalProperties": false,
+      "properties": { "build_minutes": { "type": ["integer", "number", "null"], "minimum": 0 }, "gross_savings_minutes": { "type": ["integer", "number", "null"], "minimum": 0 }, "maintenance_minutes": { "type": ["integer", "number", "null"], "minimum": 0 }, "false_positive_minutes": { "type": ["integer", "number", "null"], "minimum": 0 }, "flaky_minutes": { "type": ["integer", "number", "null"], "minimum": 0 }, "runner_minutes": { "type": ["integer", "number", "null"], "minimum": 0 }, "llm_minutes": { "type": ["integer", "number", "null"], "minimum": 0 }, "run_minutes": { "type": ["integer", "number", "null"], "minimum": 0 }, "data_minutes": { "type": ["integer", "number", "null"], "minimum": 0 } }
+    },
+    "policy": {
+      "type": "object", "additionalProperties": false, "required": ["version", "ref", "digest", "approved_by", "approved_at", "valid_until", "formula_version"],
+      "properties": { "version": { "type": "string", "minLength": 1 }, "ref": { "type": "string", "minLength": 1 }, "digest": { "type": "string", "minLength": 1 }, "approved_by": { "type": "string", "minLength": 1 }, "approved_at": { "type": "string", "minLength": 1 }, "valid_until": { "type": "string", "minLength": 1 }, "formula_version": { "type": "string", "minLength": 1 }, "costs": { "$ref": "#/$defs/costs" } }
+    },
+    "metric": {
+      "type": "object", "additionalProperties": false, "required": ["state", "unit", "formula_version"],
+      "properties": { "state": { "enum": ["OBSERVED", "NOT_OBSERVED", "NOT_COMPUTABLE", "BLOCKED"] }, "numerator": { "type": ["integer", "number", "null"] }, "denominator": { "type": ["integer", "number", "null"] }, "value": { "type": ["integer", "number", "null"] }, "unit": { "enum": ["ratio", "minutes", "months", "count"] }, "evidence_refs": { "type": "array", "items": { "type": "string" } }, "formula_version": { "type": "string", "minLength": 1 } }
+    },
+    "denominator": {
+      "type": "object", "additionalProperties": false,
+      "required": ["candidate_count", "eligible_count", "excluded_count", "blocked_count", "stop_triggered_count", "out_of_plan_count", "attempt_count", "retry_group_count", "candidate_ids", "eligible_ids", "excluded_ids", "blocked_ids", "stop_triggered_ids", "out_of_plan_ids", "attempt_ids", "retry_group_ids"],
+      "properties": { "candidate_count": { "type": "integer", "minimum": 0 }, "eligible_count": { "type": "integer", "minimum": 0 }, "excluded_count": { "type": "integer", "minimum": 0 }, "blocked_count": { "type": "integer", "minimum": 0 }, "stop_triggered_count": { "type": "integer", "minimum": 0 }, "out_of_plan_count": { "type": "integer", "minimum": 0 }, "attempt_count": { "type": "integer", "minimum": 0 }, "retry_group_count": { "type": "integer", "minimum": 0 }, "candidate_ids": { "type": "array", "items": { "type": "string" } }, "eligible_ids": { "type": "array", "items": { "type": "string" } }, "excluded_ids": { "type": "array", "items": { "type": "string" } }, "blocked_ids": { "type": "array", "items": { "type": "string" } }, "stop_triggered_ids": { "type": "array", "items": { "type": "string" } }, "out_of_plan_ids": { "type": "array", "items": { "type": "string" } }, "attempt_ids": { "type": "array", "items": { "type": "string" } }, "retry_group_ids": { "type": "array", "items": { "type": "string" } } }
+    },
+    "metrics": {
+      "type": "object", "additionalProperties": false,
+      "required": ["evidence_completeness_rate", "run_availability_rate", "failure_attribution_rate", "retry_retention_rate", "tool_false_positive_rate", "high_risk_false_negative_count", "error_pass_count", "net_savings", "payback_months"],
+      "properties": { "evidence_completeness_rate": { "$ref": "#/$defs/metric" }, "run_availability_rate": { "$ref": "#/$defs/metric" }, "failure_attribution_rate": { "$ref": "#/$defs/metric" }, "retry_retention_rate": { "$ref": "#/$defs/metric" }, "tool_false_positive_rate": { "$ref": "#/$defs/metric" }, "high_risk_false_negative_count": { "$ref": "#/$defs/metric" }, "error_pass_count": { "$ref": "#/$defs/metric" }, "net_savings": { "$ref": "#/$defs/metric" }, "payback_months": { "$ref": "#/$defs/metric" } }
+    },
+    "roi": {
+      "type": "object", "additionalProperties": false, "required": ["formula_version", "net_savings", "payback_months", "costs"],
+      "properties": { "formula_version": { "type": "string", "minLength": 1 }, "net_savings": { "$ref": "#/$defs/metric" }, "payback_months": { "$ref": "#/$defs/metric" }, "costs": { "$ref": "#/$defs/costs" }, "evidence_refs": { "type": "array", "items": { "type": "string" } } }
+    }
+  }
+}

@@ -86,7 +86,7 @@
     "versions": {
       "type": "object",
       "additionalProperties": false,
-      "required": ["python_version", "input_schema_versions", "catalog_version", "mapping_version", "policy_version"],
+      "required": ["core_version", "core_commit", "python_version", "input_schema_versions", "catalog_version", "mapping_version", "policy_version"],
       "properties": {
         "core_version": { "type": "string", "minLength": 1 },
         "core_commit": { "type": "string", "minLength": 1 },
@@ -177,10 +177,10 @@
       "additionalProperties": false,
       "required": ["manifest", "catalog"],
       "properties": {
-        "manifest": { "type": "object" },
-        "catalog": { "type": "object" },
-        "agent_spec": { "type": ["object", "null"] },
-        "agent_runs": { "type": ["array", "null"] },
+        "manifest": { "oneOf": [{ "type": "object", "not": { "required": ["path"] } }, { "$ref": "#/$defs/artifact" }] },
+        "catalog": { "oneOf": [{ "type": "object", "not": { "required": ["path"] } }, { "$ref": "#/$defs/artifact" }] },
+        "agent_spec": { "oneOf": [{ "type": "object", "not": { "required": ["path"] } }, { "$ref": "#/$defs/artifact" }, { "type": "null" }] },
+        "agent_runs": { "oneOf": [{ "type": "array" }, { "$ref": "#/$defs/artifact" }, { "type": "null" }] },
         "tool_scope": { "type": ["object", "array", "null"] },
         "formal_result": { "type": ["object", "null"] }
       }
