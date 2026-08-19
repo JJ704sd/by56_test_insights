@@ -6,8 +6,8 @@
 | 状态 | `REVIEWED_WITH_BLOCKERS`；§2.3 门槛拆分 `NOT_APPROVED`；按 `BLOCKED_BY_P1B_REAL_SUMMARY` 停在 PRE/评审/catalog |
 | 当前实施许可 | `SPEC_REVIEW_ONLY`；stage Schema/core/CLI 为 `NOT_AUTHORIZED` |
 | 日期 | 2026-08-19 |
-| 提交基线 | `codex/record-desktop-inline-proof@ff11ddb`，`qualityctl 0.1.0` |
-| 工作区验证快照 | P1b/P1c PRE 未提交增量存在；Python 3.14.6 下 `153/153` unittest 通过；Python 3.11 CI 待运行；该数字不是业务证据 |
+| 提交基线 | `codex/record-desktop-inline-proof@a603f2e`，`qualityctl 0.1.0` |
+| 工作区验证快照 | 当前提交已包含 P1b/PRE 增量；Python 3.14.6 下 `153/153` unittest 通过；当前精确 revision 的 Python 3.11 CI 待绑定；该数字不是业务证据 |
 | 本轮评审记录 | [P1c Spec 评审记录](round-2-p1c-spec-review.md)；[脱敏 fixture catalog](round-2-p1c-fixture-catalog.md) |
 | 上位文档 | [Round 2 P1 Evidence Pipeline Spec](round-2-p1-evidence-pipeline-spec.md) |
 | 直接输入契约 | [Round 2 P1b Iteration Summary Spec](round-2-p1b-iteration-summary-spec.md) |
@@ -43,7 +43,7 @@ P1b 的 `VALID` 只说明迭代证据可以复算，不能自动解释为 G1、G
 
 ### 2.1 已验证事实
 
-- 提交态 `ff11ddb` 已提供单变更 evidence verifier、差异草稿、人工裁决校验、冻结 ledger
+- 提交态 `a603f2e` 已提供单变更 evidence verifier、差异草稿、人工裁决校验、冻结 ledger
   和四个 evidence CLI；
 - 当前工作区新增 P1b iteration index/summary、严格 Schema/Pydantic、safe resolver、指标/ROI
   聚合和 `summarize-iteration`，PRE 后全量 unittest 为 `153/153`；

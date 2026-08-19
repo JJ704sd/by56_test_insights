@@ -4,7 +4,7 @@
 | --- | --- |
 | 评审日期 | 2026-08-19 |
 | 评审对象 | `round-2-p1c-stage-recommendation-harness-spec.md` v0.2 Draft |
-| 仓库修订 | `ff11ddb7615ede298d26e2d5b7e3bc5d75664bc6` + 未提交 P1/P1b/P1c fixture 增量 |
+| 仓库修订 | `a603f2e501601a3e9ae1494920983de318f1db3a` + 当前未提交工作区文档增量 |
 | 评审结论 | `REVIEWED_WITH_BLOCKERS` |
 | 激活门槛拆分 | `NOT_APPROVED` |
 | 当前实施边界 | 只允许 PRE 修复、评审和 fixture catalog；stage core/CLI 禁止开始 |
@@ -78,7 +78,7 @@ artifact 不改写。没有 dual-write、破坏性迁移或需要回滚的真实
 | `P1C-REV-003` | `SPEC_RESOLVED` | v0.2 §8.3 删除 `freeze.digest` 后计算语义投影，禁止把文件 bytes digest 回填到同一 artifact | 独立实现该向量并由 Schema/Pydantic/core 测试复核 |
 | `P1C-REV-004` | `SPEC_RESOLVED` | v0.2 §8.2/§10.3 分离 summary artifact bytes digest、窗口冻结 decision digest 和重算 decision digest | 三方一致/逐层不一致 fixture 全部通过 |
 | `P1C-REV-005` | `SPEC_RESOLVED` | v0.2 §7 冻结有序 canonical material 与独立 SHA-256 向量 | Python core 与独立测试路径输出同一 bytes/digest |
-| `P1C-REV-006` | `OPEN` | Python 3.11 对当前未提交 P1b 增量尚无结果 | CI 运行链接/日志和精确 revision |
+| `P1C-REV-006` | `OPEN` | Python 3.11 对当前工作区 revision 尚无结果 | CI 运行链接/日志和精确 revision |
 
 `SPEC_RESOLVED` 只表示文字合同不再歧义，不等于实现、contract owner 批准或 DoD。三个
 技术项仍需测试证据；三个 `OPEN` 项关闭前，fixture catalog 只是测试设计清单，不能被解释为
@@ -86,7 +86,7 @@ contract freeze 或 `P1C-001` 完成，更不能成为真实 Gate、阶段批准
 
 ## 5. 2026-08-19 执行复核快照
 
-本次复核固定为 `HEAD=ff11ddb7615ede298d26e2d5b7e3bc5d75664bc6` 加当前未提交工作区；未执行
+本次复核固定为 `HEAD=a603f2e501601a3e9ae1494920983de318f1db3a` 加当前未提交工作区；未执行
 reset、checkout、清理、提交或推送。当前工作区没有 `stage.py`、stage Schema、`test_stage.py`
 或 `decide-round2` 实现，也没有生成 stage fixture JSON。
 
@@ -98,9 +98,9 @@ reset、checkout、清理、提交或推送。当前工作区没有 `stage.py`�
 | `p1_evidence_smoke.py` | exit `0`，`formal_release_effect=NONE` | 仅 synthetic-p1 fixture |
 | Embedded UI smoke | exit `0` | 未扩展 UI 或批准入口 |
 | `git diff --check` | exit `0` | 仅格式/空白检查 |
-| GitHub Actions `python-qualityctl` | [run 32118256664](https://github.com/JJ704sd/by56_test_insights/actions/runs/32118256664) 对 `HEAD` 成功 | workflow 使用 Python 3.11；该 run 不包含当前未提交 P1b/PRE 增量 |
+| GitHub Actions `python-qualityctl` | [run 32118256664](https://github.com/JJ704sd/by56_test_insights/actions/runs/32118256664) 为此前记录的成功运行 | workflow 使用 Python 3.11；该 run 不能作为当前精确 revision 或工作区的 CI 证据 |
 
-因此 `P1C-REV-006` 仍为 `OPEN`：当前工作区 revision 没有 Python 3.11 CI 证据。严格门禁仍为
+因此 `P1C-REV-006` 仍为 `OPEN`：当前 `a603f2e`/工作区没有 Python 3.11 CI 证据。严格门禁仍为
 `P1B_FIXTURE_VERIFIED=PENDING_PY311_CI`，不是 `P1B_FIXTURE_VERIFIED`，更不是
 `P1B_REAL_SUMMARY_READY`。R2-G0 审计仍为 `REMAIN_BLOCKED`、`0/9 READY`，没有真实 Day 0、
 受控真实证据、已批准 policy 或双人真实 summary 复算；八周时钟保持未启动。
@@ -129,7 +129,7 @@ Python 3.11 当前工作区 CI、`P1C-REV-001/002/006` 或 `P1B_REAL_SUMMARY_REA
 
 ## 7. 修复后状态快照
 
-本轮仍固定为 `HEAD=ff11ddb7615ede298d26e2d5b7e3bc5d75664bc6` 加当前未提交工作区；未创建
+本轮仍固定为 `HEAD=a603f2e501601a3e9ae1494920983de318f1db3a` 加当前未提交工作区；未创建
 stage Schema/core/CLI，也未读取或生成真实业务证据。focused evidence/iteration 测试分别为
 `31/31`、`22/22`，全量为 `153/153`；smoke 与 `git diff --check` 均为 exit `0`。
 `P1C-REV-001`（门槛同步批准）、

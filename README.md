@@ -15,7 +15,7 @@ LLM 插件 MVP 见 [插件 MVP Spec](docs/plugin-mvp-spec.md)，后续维护先�
 
 三类入参（manifest / catalog / agent_spec）与每条 Agent run 都有版本化 JSON Schema 与 Pydantic v2 校验器，详见 [`docs/schemas/v1/README.md`](docs/schemas/v1/README.md)。MCP 工具与 CLI 子命令均在边界先做结构校验，非 `ok` 时返回结构化错误。CI 流水线见 `.github/workflows/python-qualityctl.yml`（windows-latest + Python 3.11 + 单元测试 + MCP stdio smoke）。
 
-截至 2026-08-19，当前工作区在 Python 3.14.6 下为 `148/148` 项单元测试通过；Python 3.11 CI 尚待对当前未提交增量运行。该数量是仓库验证快照，不是任何真实业务试点证据。Round 2 目前只有 [P0 试点脚手架](docs/round-2-pilot/README.md)，`R2-G0` 尚未满足，本次阶段输出为 `REMAIN_BLOCKED`，8 周影子时钟尚未启动。P1c §2.3 门槛拆分仍未获批准，stage core/CLI 未开始。
+截至 2026-08-19，当前工作区在 Python 3.14.6 下为 `153/153` 项单元测试通过；Python 3.11 CI 尚待绑定当前精确 revision 复核。该数量是仓库验证快照，不是任何真实业务试点证据。Round 2 目前只有 [P0 试点脚手架](docs/round-2-pilot/README.md)，`R2-G0` 尚未满足，本次阶段输出为 `REMAIN_BLOCKED`，8 周影子时钟尚未启动。P1c §2.3 门槛拆分仍未获批准，stage core/CLI 未开始。
 
 ## 快速开始
 
@@ -44,6 +44,10 @@ qualityctl --help
 ```
 
 设计结论、开源项目映射和分阶段路线图见 [自动化机会地图](docs/automation-opportunity-map.md)；可评审、可拆票、可验收的首版规划见 [MVP Spec](docs/mvp-spec.md)。下一阶段的真实业务影子试点、指标门槛和有限硬门禁准入标准见 [Round 2 Spec](docs/round-2-shadow-pilot-spec.md)；当前启动准备的工作包、依赖、证据合同和可拆票清单见 [R2-G0 Execution Spec](docs/round-2-g0-execution-spec.md)；启动审计与模板见 [Round 2 P0 脚手架](docs/round-2-pilot/README.md)。`R2-G0_READY` 之后的证据包、差异裁决、迭代聚合和 G1–G3 执行契约见 [Round 2 P1 Evidence Pipeline Spec](docs/round-2-p1-evidence-pipeline-spec.md)；当前可用脱敏 fixture 实施的完整性硬化与冻结迭代汇总见 [Round 2 P1b Spec](docs/round-2-p1b-iteration-summary-spec.md)；P1b 之后的可回放阶段建议、单调安全检查和 G1–G3 审计设计见 [Round 2 P1c Spec](docs/round-2-p1c-stage-recommendation-harness-spec.md)。这些文档当前都不表示真实试点已启动。
+
+只有真实 Round 2 形成并获批 GO_LIMITED_GATE 后才可激活的有限硬门禁设计见
+[Round 3 Spec](docs/round-3-limited-gate-harness-spec.md)；该文档当前为
+DESIGN_ONLY / NOT_ACTIVATABLE，不授权 CI 或分支保护变更。
 
 ## 核心边界
 
