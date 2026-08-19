@@ -179,6 +179,69 @@ class AgentSpecValidationTests(unittest.TestCase):
         joined = " ".join(result.errors)
         self.assertIn("regex", joined)
 
+    def test_regex_pattern_with_nested_repetition_is_rejected(self) -> None:
+        spec = load_json(EXAMPLES / "agent-cases.json")
+        spec["cases"][0]["assertions"] = [
+            {"type": "matches", "path": "value", "pattern": "(a+)+$"}
+        ]
+
+        result = validate_agent_spec(spec)
+
+        self.assertFalse(result.ok)
+        self.assertTrue(
+            any("unsafe regex" in error for error in result.errors), result.errors
+        )
+
+    def test_regex_pattern_with_repeated_alternation_is_rejected(self) -> None:
+        spec = load_json(EXAMPLES / "agent-cases.json")
+        spec["cases"][0]["assertions"] = [
+            {"type": "matches", "path": "value", "pattern": "(a|aa)+$"}
+        ]
+
+        result = validate_agent_spec(spec)
+
+        self.assertFalse(result.ok)
+        self.assertTrue(
+            any("unsafe regex" in error for error in result.errors), result.errors
+        )
+
+    def test_regex_pattern_with_multiple_variable_repeats_is_rejected(self) -> None:
+        spec = load_json(EXAMPLES / "agent-cases.json")
+        spec["cases"][0]["assertions"] = [
+            {"type": "matches", "path": "value", "pattern": "a*a*a*a*b"}
+        ]
+
+        result = validate_agent_spec(spec)
+
+        self.assertFalse(result.ok)
+        self.assertTrue(
+            any("unsafe regex" in error for error in result.errors), result.errors
+        )
+
+    def test_regex_pattern_with_repeated_complex_group_is_rejected(self) -> None:
+        spec = load_json(EXAMPLES / "agent-cases.json")
+        spec["cases"][0]["assertions"] = [
+            {"type": "matches", "path": "value", "pattern": "(a+){100}$"}
+        ]
+
+        result = validate_agent_spec(spec)
+
+        self.assertFalse(result.ok)
+        self.assertTrue(
+            any("unsafe regex" in error for error in result.errors), result.errors
+        )
+
+    def test_regex_pattern_length_is_bounded(self) -> None:
+        spec = load_json(EXAMPLES / "agent-cases.json")
+        spec["cases"][0]["assertions"] = [
+            {"type": "matches", "path": "value", "pattern": "a" * 257}
+        ]
+
+        result = validate_agent_spec(spec)
+
+        self.assertFalse(result.ok)
+        self.assertTrue(any("256" in error for error in result.errors), result.errors)
+
     def test_number_assert_with_both_tolerances_rejected(self) -> None:
         spec = load_json(EXAMPLES / "agent-cases.json")
         spec["cases"][0]["assertions"].append(
