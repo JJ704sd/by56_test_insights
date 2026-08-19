@@ -9,6 +9,7 @@ from typing import Any
 
 MISSING = object()
 MINIMUM_RUNS_BY_RISK = {"high": 3, "medium": 3, "low": 1}
+MAX_REGEX_MATCH_LENGTH = 4096
 
 
 from .validation import validate_agent_run, validate_agent_spec  # noqa: E402
@@ -127,6 +128,11 @@ def _judge_assertion(output: Any, assertion: Mapping[str, Any]) -> tuple[bool, s
         pattern = assertion.get("pattern")
         if not isinstance(pattern, str):
             return False, f"{path}: regex pattern is missing"
+        if isinstance(actual, str) and len(actual) > MAX_REGEX_MATCH_LENGTH:
+            return False, (
+                f"{path}: value exceeds regex match limit of "
+                f"{MAX_REGEX_MATCH_LENGTH} characters"
+            )
         matched = isinstance(actual, str) and re.search(pattern, actual) is not None
         return matched, f"{path}: value {actual!r} does not match {pattern!r}"
     if kind == "number":

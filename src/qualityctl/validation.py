@@ -41,6 +41,93 @@ from pydantic import (
 SUPPORTED_VERSION: Literal["1.0"] = "1.0"
 
 
+def _regex_has_unsafe_repetition(pattern: str) -> bool:
+    """Return whether repetition can trigger excessive regex backtracking.
+
+    Python's backtracking regex engine can take exponential time for patterns
+    such as ``(a+)+$`` or ``(a|aa)+$``.  The input schema is caller-controlled,
+    so conservatively allow at most one variable repeat and never repeat a
+    group before an Agent output is matched.
+    """
+
+    repeat_in_group = [False]
+    last_atom_contains_repeat = False
+    last_atom_is_group = False
+    variable_repeat_count = 0
+    index = 0
+    while index < len(pattern):
+        character = pattern[index]
+        if character == "\\":
+            index += 2
+            last_atom_contains_repeat = False
+            last_atom_is_group = False
+            continue
+        if character == "[":
+            index += 1
+            while index < len(pattern):
+                if pattern[index] == "\\":
+                    index += 2
+                elif pattern[index] == "]":
+                    index += 1
+                    break
+                else:
+                    index += 1
+            last_atom_contains_repeat = False
+            last_atom_is_group = False
+            continue
+        if character == "(":
+            repeat_in_group.append(False)
+            last_atom_contains_repeat = False
+            last_atom_is_group = False
+            index += 1
+            continue
+        if character == ")":
+            last_atom_contains_repeat = repeat_in_group.pop()
+            last_atom_is_group = True
+            index += 1
+            continue
+
+        repeat_end = index
+        is_repeat = character in "*+?"
+        is_variable_repeat = is_repeat
+        if character == "?" and index > 0 and pattern[index - 1] == "(":
+            is_repeat = False
+            is_variable_repeat = False
+        if character == "{" and (match := re.match(r"\{(\d+)(?:,(\d*))?\}", pattern[index:])):
+            is_repeat = True
+            minimum = int(match.group(1))
+            maximum_text = match.group(2)
+            is_variable_repeat = maximum_text is not None and (
+                maximum_text == "" or int(maximum_text) != minimum
+            )
+            repeat_end = index + len(match.group(0)) - 1
+
+        if is_repeat:
+            if last_atom_is_group:
+                return True
+            if is_variable_repeat:
+                variable_repeat_count += 1
+            if (
+                is_variable_repeat
+                and (variable_repeat_count > 1 or last_atom_contains_repeat)
+            ):
+                return True
+            if is_variable_repeat:
+                repeat_in_group[-1] = True
+                last_atom_contains_repeat = True
+            last_atom_is_group = False
+            index = repeat_end + 1
+            if index < len(pattern) and pattern[index] in "?+":
+                index += 1
+            continue
+
+        if character not in "?:=!<>P#-":
+            last_atom_contains_repeat = False
+            last_atom_is_group = False
+        index += 1
+    return False
+
+
 class ValidationResult:
     """Outcome of a structural validation attempt.
 
@@ -311,7 +398,7 @@ class _OneOfAssertion(_StrictModel):
 class _MatchesAssertion(_StrictModel):
     type: Literal["matches"]
     path: str = Field(min_length=1)
-    pattern: str = Field(min_length=1)
+    pattern: str = Field(min_length=1, max_length=256)
 
     @field_validator("pattern")
     @classmethod
@@ -320,6 +407,8 @@ class _MatchesAssertion(_StrictModel):
             re.compile(value)
         except re.error as exc:
             raise ValueError(f"pattern is not a valid regex: {exc}") from exc
+        if _regex_has_unsafe_repetition(value):
+            raise ValueError("pattern uses unsafe regex repetition")
         return value
 
 
