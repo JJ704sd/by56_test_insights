@@ -15,7 +15,7 @@ LLM 插件 MVP 见 [插件 MVP Spec](docs/plugin-mvp-spec.md)，后续维护先�
 
 三类入参（manifest / catalog / agent_spec）与每条 Agent run 都有版本化 JSON Schema 与 Pydantic v2 校验器，详见 [`docs/schemas/v1/README.md`](docs/schemas/v1/README.md)。MCP 工具与 CLI 子命令均在边界先做结构校验，非 `ok` 时返回结构化错误。CI 流水线见 `.github/workflows/python-qualityctl.yml`（windows-latest + Python 3.11 + 单元测试 + MCP stdio smoke）。
 
-截至 2026-08-19，当前工作区在 Python 3.14.6 下为 `153/153` 项单元测试通过；Python 3.11 CI 尚待绑定当前精确 revision 复核。该数量是仓库验证快照，不是任何真实业务试点证据。Round 2 目前只有 [P0 试点脚手架](docs/round-2-pilot/README.md)，`R2-G0` 尚未满足，本次阶段输出为 `REMAIN_BLOCKED`，8 周影子时钟尚未启动。P1c §2.3 门槛拆分仍未获批准，stage core/CLI 未开始。
+截至 2026-08-19，当前工作区在 Python 3.14.6 下为 `153/153` 项单元测试通过；GitHub Actions 已在当前精确 revision `d2401bab0bf18eec3e7d7abb40a7b7915e6932fb` 上以 Python 3.11 成功完成 unit tests 与 MCP smoke（[run 32227894301](https://github.com/JJ704sd/by56_test_insights/actions/runs/32227894301)）。该 workflow 仍使用 editable checkout 安装（`pip install -e .[test]`），尚未形成本 Spec 要求的 pinned wheel/hash exact-SHA CI provenance；这些结果都不是任何真实业务试点证据。Round 2 目前只有 [P0 试点脚手架](docs/round-2-pilot/README.md)，`R2-G0` 尚未满足，本次阶段输出为 `REMAIN_BLOCKED`，8 周影子时钟尚未启动。P1c §2.3 门槛拆分仍未获批准，stage core/CLI 未开始。
 
 ## 快速开始
 

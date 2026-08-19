@@ -78,7 +78,7 @@ artifact 不改写。没有 dual-write、破坏性迁移或需要回滚的真实
 | `P1C-REV-003` | `SPEC_RESOLVED` | v0.2 §8.3 删除 `freeze.digest` 后计算语义投影，禁止把文件 bytes digest 回填到同一 artifact | 独立实现该向量并由 Schema/Pydantic/core 测试复核 |
 | `P1C-REV-004` | `SPEC_RESOLVED` | v0.2 §8.2/§10.3 分离 summary artifact bytes digest、窗口冻结 decision digest 和重算 decision digest | 三方一致/逐层不一致 fixture 全部通过 |
 | `P1C-REV-005` | `SPEC_RESOLVED` | v0.2 §7 冻结有序 canonical material 与独立 SHA-256 向量 | Python core 与独立测试路径输出同一 bytes/digest |
-| `P1C-REV-006` | `OPEN` | Python 3.11 对当前工作区 revision 尚无结果 | CI 运行链接/日志和精确 revision |
+| `P1C-REV-006` | `OPEN` | 当前 revision 已有 Python 3.11 CI run，但 workflow 使用 editable install；Round 3 要求的 pinned exact-SHA provenance 仍缺失 | CI 运行链接/日志、精确 revision 以及 pinned artifact/hash 证据 |
 
 `SPEC_RESOLVED` 只表示文字合同不再歧义，不等于实现、contract owner 批准或 DoD。三个
 技术项仍需测试证据；三个 `OPEN` 项关闭前，fixture catalog 只是测试设计清单，不能被解释为
@@ -134,3 +134,20 @@ stage Schema/core/CLI，也未读取或生成真实业务证据。focused eviden
 `31/31`、`22/22`，全量为 `153/153`；smoke 与 `git diff --check` 均为 exit `0`。
 `P1C-REV-001`（门槛同步批准）、
 `P1C-REV-002`（contract owner/§24）和 `P1C-REV-006`（当前工作区 Python 3.11 CI）继续 `OPEN`。
+
+## 8. 2026-08-19 当前 revision CI 状态增补
+
+本节为对 §5 和 §7 历史快照的追加记录，不改写当时的执行上下文，也不把 CI 成功误解释为
+P1c 或真实业务准备就绪。
+
+| 证据 | 当前结果 | 边界解释 |
+| --- | --- | --- |
+| 当前 revision | `d2401bab0bf18eec3e7d7abb40a7b7915e6932fb`，已推送至 `codex/record-desktop-inline-proof` | 仅证明该提交已进入远端分支 |
+| Python 3.11 GitHub Actions | [run 32227894301](https://github.com/JJ704sd/by56_test_insights/actions/runs/32227894301)，`success` | head SHA 与当前 revision 精确匹配；运行了 unit tests 与 MCP smoke |
+| 安装/构建 provenance | `python -m pip install -e .[test]` | 不是 pinned wheel/hash 的 exact-SHA 构建证据；该缺口仍 `OPEN` |
+
+因此，旧快照中“当前 revision 尚无 Python 3.11 CI 结果”的子事实已由本次 run 补充更新；但
+`P1C-REV-006` 所需的可用于 Round 3 activation audit 的 pinned exact-SHA provenance 仍未关闭，
+不应据此改写为 `P1C_FIXTURE_VERIFIED`、`P1C_REAL_RECOMMENDATION_READY` 或任何 `GO_LIMITED_GATE`。
+`P1C-REV-001`、`P1C-REV-002`、R2-G0 `REMAIN_BLOCKED`、真实 evidence 缺失以及 stage core/CLI
+未实现均保持原状态；本增补不创建 required check、publisher 或任何发布/分支保护副作用。
