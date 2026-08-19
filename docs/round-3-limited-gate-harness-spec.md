@@ -2,7 +2,7 @@
 
 | 项目 | 内容 |
 | --- | --- |
-| 文档版本 | v0.1 Design Draft |
+| 文档版本 | v0.2 Design Draft |
 | 当前状态 | DESIGN_ONLY / NOT_ACTIVATABLE |
 | 日期 | 2026-08-19 |
 | 仓库基线 | codex/record-desktop-inline-proof@a603f2e501601a3e9ae1494920983de318f1db3a |
@@ -62,6 +62,8 @@ check：
 - agent-eval 的总退出码、Wilson 区间、平均通过率和人工 semantic review；
 - decide_release_gate 的整体 release_allowed；
 - risk-check 或 select 的整体状态、未知风险、目录缺口和人工排除；
+- Round 1 manifest/catalog/agent_spec 的直接 CLI/MCP 结果：当前 schema_version 结构校验不等于
+  exact compatibility 校验，未知版本不能进入 required authority；
 - ROI 的 CANDIDATE、正净收益或回本周期；
 - P1/P1b/P1c 的 fixture、examples、单元测试或 CI 绿色状态；
 - P1c stage recommendation 本身；
@@ -82,16 +84,19 @@ check：
 | R3-BLK-008 | kill switch、rollback、通知和恢复 owner 未批准 | 演练记录、RTO、责任人、恢复审批 |
 | R3-BLK-009 | 当前 compatibility matrix 仍含旧 core commit | exact producer/reader/core/adapter matrix 的批准迁移记录 |
 
-任一阻塞存在时，activation_state 必须保持 NOT_ACTIVATABLE，ci_conclusion 必须为 null。
+任一阻塞存在时，activation_state 必须保持 DESIGN_ONLY、publish_mode 必须为 NONE，
+ci_conclusion 必须为 null。NOT_ACTIVATABLE 是本文档的治理状态，不是 report 枚举值。
 
 ## 3. 激活公式与分层里程碑
 
 ### 3.1 激活公式
 
     R3_ACTIVATABLE =
-        P1C_REAL_RECOMMENDATION_READY
-        AND external_decision == GO_LIMITED_GATE
-        AND external_decision.recommendation_digest matches recomputed digest
+        R3_FIXTURE_VERIFIED
+        AND P1C_FIXTURE_VERIFIED
+        AND P1C_REAL_RECOMMENDATION_READY
+        AND external_three_party_attestation.decision == GO_LIMITED_GATE
+        AND external_three_party_attestation.recommendation_digest matches recomputed digest
         AND approved_hard_rule_allowlist
         AND approved_policy_and_trust_root
         AND approved_target_ci_scope
@@ -191,17 +196,21 @@ profile、skill 或调用方覆盖。
 
 1. enforcement-visible 的决定必须可从冻结 input、policy、profile、core 和 cutoff 独立重建。
 2. raw、index、report、waiver 和 receipt 全部 exclusive-create；修正使用新 ID 和新 digest。
-3. 同 input bytes、policy、profile、core、adapter 和 cutoff 必须得到同 decision digest。
-4. generated_at、绝对路径、显示文本、线程完成顺序和 CI run URL 不进入 decision digest。
-5. 任一 source bytes、identity、policy、profile order、approval 或 compatibility 改变必须改变
-   digest 或使结果 BLOCKED。
+3. 同 input bytes、policy、profile、core、canonicalization 和 cutoff 必须得到同
+   evaluation_decision_digest；无语义变化的 CLI/publisher adapter 升级不得改变它。
+4. generated_at、绝对路径、显示文本、线程完成顺序和 CI run URL 不进入
+   evaluation_decision_digest。
+5. 任一 source bytes、identity、policy、profile order、approval 或有语义影响的 compatibility 改变
+   必须改变 evaluation_decision_digest 或使结果 BLOCKED。
 6. 状态优先级固定为 STOP > BLOCKED > DENY > PASS；后序结果只能保持或收紧。
 7. 未观测不是 0，缺证据不是 PASS，runner invalid/technical failure 不是产品失败也不是 PASS。
 8. 未知 Schema、check、profile、policy、签名算法、trust root、adapter 或状态必须 fail loud。
-9. fixture 的 activation_state 固定 NOT_ACTIVATABLE，ci_conclusion 固定 null。
+9. fixture 的 activation_state 固定 DESIGN_ONLY、publish_mode 固定 NONE、ci_conclusion 固定
+   null。
 10. evaluator 不持 checks write、branch administration、deployment、package publish、OIDC 或业务
     Secret。
-11. publisher 不读取 raw、不重算规则，只消费并验证 report bytes/digest 和 activation state。
+11. publisher 不读取 raw、不重算规则，只消费并验证 report bytes digest、
+    evaluation_decision_digest、activation state 和 publish mode。
 12. hard gate 只能作用于批准 cohort，不能授予发布、部署、回滚或风险接受权限。
 
 ## 7. 设计三次：候选契约
@@ -261,6 +270,9 @@ core 隐藏 strict validation、safe resolver、逐层重放、identity、approv
     external approval / policy authority
                 |
                 v
+    admission assembler + trust freezer
+                |
+                v
       limited-gate-index@1.0
                 |
                 v
@@ -282,6 +294,8 @@ core 隐藏 strict validation、safe resolver、逐层重放、identity、approv
 
 - evaluator 读取显式 artifact root 内的冻结本地引用；
 - evaluator 不访问网络，不调用 MCP、模型、subprocess 或平台 API；
+- admission assembler 是 evaluator 之外的外部 producer；它可以按批准方式读取 authority，
+  但只能把可离线验证、带 expiry/revocation snapshot 和 digest binding 的 attestation 冻结进 index；
 - publisher 不拥有 core，不读取 policy/raw，不允许改变 decision；
 - branch protection 由平台 owner 管理，不是 adapter 功能；
 - local resolver 暂时是唯一 provider。出现真实第二存储实现后，才另立 ArtifactReader
@@ -300,25 +314,28 @@ index 是冻结引用清单，不是调用方自填结论。至少包含：
 | --- | --- |
 | identity | repo_id、revision、change_id、pilot_id、cohort_id |
 | freeze | frozen_at、frozen_by、freeze projection version、digest |
-| activation | requested mode、kill-switch snapshot、target check identity |
-| stage | stage index/recommendation refs、bytes digest、decision digest |
+| activation | requested activation_state、requested publish_mode、kill-switch snapshot、target check identity |
+| stage | stage index/recommendation refs、bytes digest、recommendation decision digest |
 | approval | external decision ref、digest、roles、issued/expiry、trust envelope |
 | policy | limited-gate-policy ref、bytes digest、policy digest |
 | profile | exact ordered check ids/versions、profile digest |
 | versions | schema/core/adapter/canonicalization/wheel/hash matrix |
-| evidence | manifest/catalog/agent/evidence/iteration refs 和 digest |
+| target_evidence | 当前目标 change 的 gate-specific manifest/catalog/agent/evidence refs 和 digest；stage 基线的 raw/iteration lineage 只从 stage index 递归解析，不重复登记 |
 | cutoff | evaluation_cutoff_at，带时区并冻结 |
 | output | 专用 report directory 和 exclusive-create target |
 
 约束：
 
-1. stage recommendation 必须由 P1c core 从 stage index 重算；
+1. stage recommendation 必须由 P1c core 从 stage index 重算；stage graph 是其 baseline lineage 的
+   唯一引用清单；
 2. approval 必须精确引用重算的 recommendation decision digest；
 3. repo/revision/change/pilot/cohort 在所有证据中一致；
 4. 绝对路径、..、junction/symlink escape、URL、未知 media type 或 digest mismatch 全部拒绝；
-5. 同一 artifact identity 或 bytes digest 不得在不允许的位置重复；
-6. evaluation_cutoff_at 进入 decision digest，运行墙钟只用于 generated_at；
-7. fixture 和 DESIGN_ONLY index 不能请求真实 publish。
+5. target_evidence 只登记当前受评估 change 的增量输入；任何可从 stage graph 到达的 ref/digest
+   在此重复即 BLOCKED/DUPLICATE_SOURCE_GRAPH；
+6. 同一 artifact identity 或 bytes digest 不得在不允许的位置重复；
+7. evaluation_cutoff_at 进入 evaluation_decision_digest，运行墙钟只用于 generated_at；
+8. fixture 和 DESIGN_ONLY index 不能请求真实 publish。
 
 ### 9.2 limited-gate-policy@1.0
 
@@ -352,7 +369,7 @@ policy 不得包含可执行脚本、表达式、任意 callback、插件路径�
       "source_digests": []
     }
 
-check 按 profile ordinal 稳定排序。message 不进入 decision digest；id、version、status、code、
+check 按 profile ordinal 稳定排序。message 不进入 evaluation_decision_digest；id、version、status、code、
 refs 和 digests 必须进入。
 
 ### 9.4 limited-gate-report@1.0
@@ -361,26 +378,29 @@ refs 和 digests 必须进入。
 
 - contract/schema_version；
 - identity、activation_state、evaluation_mode；
+- publish_mode：NONE / OBSERVATION / REQUIRED；
 - decision：PASS / DENY / BLOCKED / STOP；
 - ci_conclusion：success / failure / null；
 - ordered check_results；
 - source refs/digests、stage recommendation digest、approval/policy/profile digest；
 - core/adapter/canonicalization/wheel/hash identity；
-- decision_digest；
+- evaluation_decision_digest；
 - formal_release_effect=NONE；
 - formal_release_allowed=false；
 - formal_deploy_effect=NONE；
 - risk_accepted=false；
 - generated_at。
 
-只有 activation_state=LIMITED_ACTIVE 且 report 通过全部 publisher preflight 时，
-ci_conclusion 才允许非 null。CANARY 可发布非 required 的观察性状态，但不能伪装成 active。
+publish_mode=NONE 时 ci_conclusion 必须为 null。只有 activation_state=CANARY_ACTIVE 或
+LIMITED_ACTIVE、report 通过全部 publisher preflight，且 publish_mode 与外部批准的 cohort 精确
+一致时，ci_conclusion 才允许非 null。OBSERVATION 永远不满足 required check；REQUIRED 只对批准
+cohort 生效。CANARY_READY 仍是等待变更批准的状态，不能发布 conclusion。
 
 ### 9.5 limited-gate-waiver@1.0
 
 默认不启用 waiver。只有 contract owners 显式批准后，才允许该契约进入实现。它必须：
 
-- 绑定单一 repo/revision/change/cohort、原 decision digest 和可豁免 code；
+- 绑定单一 repo/revision/change/cohort、原 evaluation_decision_digest 和可豁免 code；
 - 记录外部签署角色、原因、issue/expiry、trust envelope 和 bytes digest；
 - TTL 短于 policy 允许上限；
 - exclusive-create，不能延长或原地修改；
@@ -393,21 +413,27 @@ ci_conclusion 才允许非 null。CANARY 可发布非 required 的观察性状�
 receipt 是 adapter/publisher 的追加式审计产物，不是 core 输入。它至少记录：
 
 - receipt_id、event_kind、previous_receipt_digest；
-- report bytes/decision digest；
+- report bytes digest/evaluation_decision_digest；
 - adapter/publisher identity；
 - target check、CI run/build identity；
 - requested/published conclusion；
 - platform response ref；
-- occurred_at、receipt digest。
+- occurred_at、publication_receipt_digest。
 
 允许的 event_kind 为 EVALUATED、PUBLISH_ATTEMPTED、PUBLISHED、PUBLISH_FAILED、PAUSED、
 ROLLED_BACK、WAIVER_APPLIED。event chain 断裂、重复或乱序必须被审计工具报告。
 
 ### 9.7 Digest 规则
 
-业务 digest 包含 identity、activation mode、cutoff、policy/profile/approval、ordered checks、
-source digests、core/adapter/canonicalization identity。它排除 generated_at、message、绝对路径、
-CI URL 和平台展示文本。
+evaluation_decision_digest 只描述 evaluator 的业务决定，包含 identity、activation_state、批准的
+publish_mode/cohort、cutoff、
+policy/profile/approval、ordered checks、source digests、core 和 canonicalization identity。它排除
+CLI/publisher/transport adapter identity、generated_at、message、绝对路径、CI URL 和平台展示文本。
+无语义变化的 adapter 或 publisher 升级不得改变 evaluation_decision_digest。
+
+publication_receipt_digest 描述发布尝试，包含 receipt event、report bytes digest、
+evaluation_decision_digest、adapter/publisher identity、target check、requested/published conclusion
+和平台响应引用。发布实现变化只改变 receipt chain，不改写 evaluator 的业务决定。
 
 任一 digest 投影必须有独立 canonical bytes 向量，不能把 artifact 自身 bytes digest 回填到同一
 artifact 后再计算自身。
@@ -443,7 +469,7 @@ manual semantic review、风险接受、测试排除、阈值争议、ROI、平�
 6. identity/fingerprint/attempt/runner evidence completeness；
 7. deterministic high-risk allowlist checks；
 8. monotonic status reduction；
-9. immutable report finalizer 和 decision digest；
+9. immutable report finalizer 和 evaluation_decision_digest；
 10. exclusive-create report；
 11. adapter 外的 publisher 验证并发布 projection；
 12. append-only receipt。
@@ -471,15 +497,15 @@ manual semantic review、风险接受、测试排除、阈值争议、ROI、平�
 
 ### 12.2 激活状态
 
-| activation_state | ci_conclusion | 说明 |
-| --- | --- | --- |
-| DESIGN_ONLY | null | 只有设计/fixture catalog |
-| SHADOW_ONLY | null | 可运行真实旁路对照，但不能 required |
-| CANARY_READY | null 或非 required observation | 等待显式 canary 变更批准 |
-| CANARY_ACTIVE | 非 required 或批准的小 cohort required | 只在批准窗口 |
-| LIMITED_ACTIVE | success/failure | 仅批准 cohort |
-| PAUSED | null | kill switch 或事故后停止发布 |
-| ROLLED_BACK | null | required 配置已恢复为 shadow/off |
+| activation_state | 允许的 publish_mode | ci_conclusion | 说明 |
+| --- | --- | --- | --- |
+| DESIGN_ONLY | NONE | null | 只有设计/fixture catalog |
+| SHADOW_ONLY | NONE | null | 可运行真实旁路对照，但不能发布 CI conclusion |
+| CANARY_READY | NONE | null | 等待显式 canary 变更批准 |
+| CANARY_ACTIVE | OBSERVATION；或批准小 cohort 的 REQUIRED | success/failure | 只在批准窗口和精确 cohort；OBSERVATION 不满足 required |
+| LIMITED_ACTIVE | REQUIRED | success/failure | 仅批准 cohort |
+| PAUSED | NONE | null | kill switch 或事故后停止发布 |
+| ROLLED_BACK | NONE | null | required 配置已恢复为 shadow/off |
 
 状态迁移不能由 evaluation result 自动完成。
 
@@ -500,9 +526,11 @@ manual semantic review、风险接受、测试排除、阈值争议、ROI、平�
     else:
         decision = PASS
 
-    if activation_state != LIMITED_ACTIVE:
+    if publish_mode == NONE:
         ci_conclusion = null
     else:
+        require activation_state in {CANARY_ACTIVE, LIMITED_ACTIVE}
+        require publish_mode and cohort exactly match external approval
         ci_conclusion = success only for PASS, otherwise failure
 
 ## 13. 薄 CLI 与 publisher 边界
@@ -525,9 +553,12 @@ manual semantic review、风险接受、测试排除、阈值争议、ROI、平�
 publisher 是独立 job/process：
 
 1. 读取 report bytes；
-2. 验证 schema、bytes digest、decision digest、activation state 和 target check；
-3. 拒绝 DESIGN_ONLY/SHADOW/PAUSED/ROLLED_BACK；
-4. 将 PASS 映射 success，将 DENY/BLOCKED/STOP 映射 failure；
+2. 验证 schema、bytes digest、evaluation_decision_digest、activation state、publish mode 和 target
+   check；
+3. 拒绝 DESIGN_ONLY/SHADOW_ONLY/CANARY_READY/PAUSED/ROLLED_BACK 和任何未获批准的
+   mode/cohort 组合；
+4. CANARY_ACTIVE 只按批准发布 OBSERVATION 或小 cohort REQUIRED；LIMITED_ACTIVE 只发布
+   REQUIRED；将 PASS 映射 success，将 DENY/BLOCKED/STOP 映射 failure；
 5. 写 append-only receipt；
 6. 不读取 raw、不执行 policy、不改变 decision。
 
@@ -545,9 +576,13 @@ publisher 是独立 job/process：
 
 - 固定算法、trust root、key/platform identity、verifier version 和有效期；
 - 检查撤销、expiry、scope、roles 和 digest binding；
-- 缺 provider、未知算法、异常或网络不可用时 fail-closed；
+- 缺 attestation/trust material、未知算法、验证异常或过期/撤销 snapshot 时 fail-closed；
 - 不把调用方自填 approved=true 当作批准；
 - 不在 evaluator 中持签名私钥。
+
+需要平台 API 或网络查询的 provider 只能位于 admission assembler。provider/network 不可用时，
+assembler 不得冻结可激活 index；evaluator 只离线验证已冻结 envelope、批准 trust material 和
+revocation snapshot，不回调 authority，也不因网络状态改变同一 index 的结果。
 
 ### 14.2 权限
 
@@ -582,7 +617,7 @@ Branch protection / required check：
 - 只能由外部角色签发；
 - 只针对明确可豁免 DENY code；
 - 不适用于 STOP、BLOCKED 的 trust/integrity/unknown/expired 类错误；
-- 绑定单一 decision digest 和短 TTL；
+- 绑定单一 evaluation_decision_digest 和短 TTL；
 - 原 report 不变，publisher 显示 waiver projection 并记录 receipt；
 - 到期后自动失效，但系统不自动延长。
 
@@ -591,6 +626,7 @@ Branch protection / required check：
 kill switch 必须位于 evaluator 无权修改的可信控制面。命中后：
 
 - activation_state 立即为 PAUSED；
+- publish_mode 立即为 NONE；
 - ci_conclusion 不再发布；
 - required 配置按批准 runbook 转回 shadow/off；
 - 保存所有 raw、report、receipt 和平台响应；
@@ -645,7 +681,8 @@ kill switch 必须位于 evaluator 无权修改的可信控制面。命中后：
 | P1 raw/report/ledger | strict v1 | 只读复用 | 不覆盖，不 dual-write |
 | iteration index/summary | strict v1 | 只读重放 | formal_release_effect 保持 NONE |
 | stage index/recommendation | 不存在 | 先由 P1c 实现 | Round 3 不绕过 P1c |
-| limited gate index/report | 不存在 | additive sidecar v1 | 未知 version fail-closed |
+| limited gate index/policy/report/receipt | 不存在 | additive sidecar v1 | 未知 version fail-closed；不读取 v0.1 draft shape |
+| admission assembler/trust freezer | 不存在 | 外部 producer + 冻结 attestation | evaluator 不联网；assembler 失败不产出可激活 index |
 | MCP | 五个工具 | 保持五个 | 不作为 CI authority |
 | CLI | 旧命令 | additive ci 子命令 | 旧签名/exit 不变 |
 | CI evaluator | editable checkout tests | pinned wheel/hash | exact installed provenance |
@@ -670,6 +707,22 @@ kill switch 必须位于 evaluator 无权修改的可信控制面。命中后：
 - 没有真实记录依赖旧 draft；
 - replay、downgrade/forward-fix 和 rollback fixture 通过；
 - contract owners 显式批准。
+
+### 17.3 v0.1 Draft → v0.2 Draft 契约收口
+
+v0.1 只有 Markdown 设计，没有 Schema、reader、writer、fixture bytes、部署或持久化记录，因此本次
+不建立双读、字段 alias 或 dual-write。v0.2 是首个允许进入 contract review 的 canonical target：
+
+| v0.1 歧义 | v0.2 唯一形式 | 迁移/恢复 |
+| --- | --- | --- |
+| NOT_ACTIVATABLE 被误作 report activation_state | report 只使用 DESIGN_ONLY 等第 12.2 节枚举；NOT_ACTIVATABLE 仅是治理状态 | 未实现，无 reader 迁移 |
+| ci_conclusion 同时承载 observation 与 required | 新增 publish_mode=NONE/OBSERVATION/REQUIRED，并与 state/cohort 批准绑定 | 未来 reader 从第一版即 strict v1 |
+| decision digest 绑定 CLI/publisher adapter | evaluation_decision_digest 与 publication_receipt_digest 分离 | adapter 变化只产生新 receipt，不重写 report |
+| index 重复维护 stage baseline 和 evidence graph | stage lineage 从 stage index 递归解析；target_evidence 只含当前 change 增量 | 重复 ref/digest fail-closed |
+
+若仓库外曾根据 v0.1 手工生成私有样例，它们不是受支持 artifact，不能就地改写或作为迁移输入；
+应在获批后用新 fixture ID、v0.2 contract 和新 digest 重新生成。只有 contract owner 确认不存在
+v0.1 reader/writer/record，且 v0.2 Schema/Pydantic/向量评审通过后，才可把 v0.1 标为 superseded。
 
 ## 18. Skills 使用边界
 
@@ -719,7 +772,7 @@ index 引用。
 
 | ID | 场景 | 预期 |
 | --- | --- | --- |
-| R3-AC-001 | exact valid DESIGN_ONLY fixture | 可生成 report，但 activation_state=NOT_ACTIVATABLE、ci_conclusion=null |
+| R3-AC-001 | exact valid DESIGN_ONLY fixture | 可生成 report，但 activation_state=DESIGN_ONLY、publish_mode=NONE、ci_conclusion=null |
 | R3-AC-002 | 未知 schema major/minor | BLOCKED/UNSUPPORTED_CONTRACT |
 | R3-AC-003 | extra field | Pydantic 与 JSON Schema 同时拒绝 |
 | R3-AC-004 | 绝对路径、.. 或 symlink/junction escape | BLOCKED/UNSAFE_ARTIFACT_PATH |
@@ -738,9 +791,9 @@ index 引用。
 | R3-AC-017 | 正 ROI 与 STOP 同时存在 | STOP，ROI 不反转 |
 | R3-AC-018 | 后序 PASS、skill 文本或人工备注试图覆盖 DENY | 最终仍 DENY |
 | R3-AC-019 | guard/check 抛异常 | BLOCKED/INTERNAL_EVALUATION_ERROR |
-| R3-AC-020 | generated_at 改变 | decision digest 不变 |
+| R3-AC-020 | generated_at 改变 | evaluation_decision_digest 不变 |
 | R3-AC-021 | source bytes、policy、approval 或 profile 改变 | digest 改变或 BLOCKED |
-| R3-AC-022 | 随机打乱输入枚举或并行完成顺序 | canonical check order 和 decision digest 不变 |
+| R3-AC-022 | 随机打乱输入枚举或并行完成顺序 | canonical check order 和 evaluation_decision_digest 不变 |
 | R3-AC-023 | duplicate/overlap 被排序掩盖 | fail-closed，不去重后 PASS |
 | R3-AC-024 | output 已存在 | exit 2，原 bytes 不变 |
 | R3-AC-025 | 中途写失败 | 不留下可被 reader 接受的完整 report |
@@ -751,12 +804,16 @@ index 引用。
 | R3-AC-030 | ACTIVE 后 kill switch | 转 PAUSED，停止发布，runbook 回退 |
 | R3-AC-031 | 回退后恢复 | 必须新 approval/index/report/receipt |
 | R3-AC-032 | 旧 CLI/MCP/AgentRun/UI 回归 | 公开语义完全不变 |
+| R3-AC-033 | CANARY_READY 或未批准 CANARY_ACTIVE 请求 publish | BLOCKED/UNAUTHORIZED_PUBLISH_MODE，publish_mode=NONE、ci_conclusion=null |
+| R3-AC-034 | 已批准 CANARY_ACTIVE observation | publish_mode=OBSERVATION，可发布非 required conclusion，不满足 required check |
+| R3-AC-035 | 只改变 CLI/publisher adapter identity | evaluation_decision_digest 不变；publication_receipt_digest 改变 |
+| R3-AC-036 | target_evidence 重复 stage graph 可达 ref/digest | BLOCKED/DUPLICATE_SOURCE_GRAPH |
 
 ## 21. 非功能、安全与 SLO
 
 | ID | 要求 |
 | --- | --- |
-| R3-NFR-001 | 相同冻结输入产生相同 decision digest |
+| R3-NFR-001 | 相同冻结输入产生相同 evaluation_decision_digest |
 | R3-NFR-002 | evaluator 无网络、模型、MCP、动态 import、任意 callback 和业务 Secret |
 | R3-NFR-003 | evaluator 与 publisher 权限隔离，前者无 checks write，后者无 raw access |
 | R3-NFR-004 | 所有 writer exclusive-create，失败不留下合法半文件 |
@@ -768,7 +825,7 @@ index 引用。
 | R3-NFR-010 | kill switch 到停止新 publish 的 RTO 由 owner 批准，建议不超过 15 分钟 |
 | R3-NFR-011 | receipt chain 可检测缺口、重复、乱序和 digest mismatch |
 | R3-NFR-012 | 不在 report/receipt 复制 Secret、prompt、原始业务 payload 或人工敏感备注 |
-| R3-NFR-013 | 检查结果按 profile ordinal 稳定提交，完成顺序不影响 digest |
+| R3-NFR-013 | 检查结果按 profile ordinal 稳定提交，完成顺序不影响 evaluation_decision_digest |
 | R3-NFR-014 | 五个 MCP 工具和既有 CLI 数量/语义保持回归基线 |
 | R3-NFR-015 | required check 同名冒充、workflow fork 权限和不可信 PR 事件有威胁测试 |
 
@@ -782,9 +839,12 @@ index 引用。
 - tampered/stale/mixed/expired/revoked/unknown/rollback fixtures；
 - 状态单调性和输入顺序置换 property tests；
 - path/media/size/digest/junction/symlink 安全测试；
+- stage baseline/target_evidence 单一 source graph 与重复引用 fail-closed；
 - exclusive-create、partial failure、retry 和 recovery；
 - CLI/core parity、stdout/stderr 和 0/1/2 exit golden；
-- publisher 拒绝非 ACTIVE、digest mismatch 和 target mismatch；
+- activation_state × publish_mode × cohort 的完整矩阵；publisher 拒绝未批准组合、digest mismatch
+  和 target mismatch；
+- adapter identity 变化不改变 evaluation_decision_digest，但会改变 publication_receipt_digest；
 - 旧 Python API、CLI、五 MCP、AgentRunV1、Embedded UI golden 回归。
 
 ### 22.2 Shadow / Canary 层
@@ -795,7 +855,7 @@ index 引用。
 - workflow permissions 静态审计和不可信 PR 威胁测试；
 - evaluator/publisher token 隔离；
 - kill-switch、publisher outage、check spoof、approval expiry 和 rollback 演练；
-- 两名独立人员从冻结 inputs 复算同一 report/digest；
+- 两名独立人员从冻结 inputs 复算同一 report/evaluation_decision_digest；
 - canary 观察窗口、样本数和扩 cohort 条件由 owner 预先批准。
 
 ### 22.3 仓库命令
@@ -851,7 +911,7 @@ LIMITED_ACTIVE 期间至少监控：
 | 正 ROI/多数 PASS 覆盖红线 | 错误继续 | STOP/BLOCKED/DENY 单调 |
 | 并行完成顺序进入 digest | 重放不一致 | 只并行纯计算，按 ordinal 稳定提交 |
 | policy/profile 事后修改 | 结果选择偏差 | exact digest + 新 index/report |
-| fixture 被误当业务证据 | 过早激活 | NOT_ACTIVATABLE + ci_conclusion=null |
+| fixture 被误当业务证据 | 过早激活 | DESIGN_ONLY + publish_mode=NONE + ci_conclusion=null |
 | 回退删除失败证据 | 审计断裂 | append-only receipt，新 artifact 恢复 |
 
 ## 25. Definition of Done
@@ -871,7 +931,7 @@ LIMITED_ACTIVE 期间至少监控：
 - canonical/digest vectors 与独立实现一致；
 - fixed guarded core、薄 CLI、单调状态和 ordered trace 全覆盖；
 - tampered/unknown/expired/mixed/path/partial-write 全部 fail-closed；
-- fixture 固定 NOT_ACTIVATABLE、ci_conclusion=null；
+- fixture 固定 activation_state=DESIGN_ONLY、publish_mode=NONE、ci_conclusion=null；
 - 旧 API/CLI/五 MCP/AgentRun/UI 回归全绿；
 - Python 3.11 exact-SHA CI、三个 smoke、Embedded UI smoke、git diff --check 通过；
 - 无 network/model/MCP/dynamic plugin/publisher/required-check side effect。
@@ -946,7 +1006,12 @@ recommendation、三方 GO_LIMITED_GATE、批准 allowlist、trusted policy 或�
 > producer/reader/storage/deployment 矩阵和 Expand → Migrate → Observe → Contract 过渡。
 > 只有契约与 fixture 实施许可获批后，才使用 $tdd 先写失败测试，实现
 > limited-gate-index@1.0、limited-gate-policy@1.0、limited-gate-report@1.0、固定 monotonic
-> guarded core 和薄 qualityctl ci evaluate CLI。只允许批准的结构完整性、Schema、冻结指纹、
+> guarded core 和薄 qualityctl ci evaluate CLI。以 v0.2 contract 为唯一目标：report 的
+> activation_state 只使用第 12.2 节枚举，publish_mode 明确为 NONE/OBSERVATION/REQUIRED；
+> evaluation_decision_digest 不绑定 CLI/publisher adapter，发布链另算 publication_receipt_digest；
+> stage baseline lineage 只从 stage index 递归解析，target_evidence 不得重复登记；需要联网的 trust
+> provider 只允许位于外部 admission assembler，evaluator 仅离线验证冻结 attestation。只允许批准的
+> 结构完整性、Schema、冻结指纹、
 > 证据/runner 完整性和确定性高风险失败进入 hard-rule allowlist；任何未知、篡改、过期、未签名、
 > mixed identity 或 guard 异常均 fail-closed，后序步骤不得反转 STOP/BLOCKED/DENY；skills、
 > LLM 文本、人工备注、ROI 和多数票不得成为状态或批准来源。所有 artifact exclusive-create，
