@@ -196,7 +196,7 @@ def _flatten_pydantic_errors(exc: ValidationError) -> list[str]:
 class _StrictModel(BaseModel):
     """Base model with strict structural defaults."""
 
-    model_config = ConfigDict(extra="forbid", str_strip_whitespace=True)
+    model_config = ConfigDict(extra="forbid", str_strip_whitespace=True, strict=True)
 
 
 # ---------------------------------------------------------------------------
@@ -405,7 +405,7 @@ class _MatchesAssertion(_StrictModel):
     def _valid_regex(cls, value: str) -> str:
         try:
             re.compile(value)
-        except re.error as exc:
+        except (re.error, OverflowError) as exc:
             raise ValueError(f"pattern is not a valid regex: {exc}") from exc
         if _regex_has_unsafe_repetition(value):
             raise ValueError("pattern uses unsafe regex repetition")

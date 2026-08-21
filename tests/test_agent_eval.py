@@ -81,6 +81,22 @@ class AgentEvaluationTests(unittest.TestCase):
         self.assertIn("4096", detail)
         self.assertNotIn("a" * 4097, detail)
 
+    def test_regex_matching_success_reports_a_match(self) -> None:
+        evaluation_spec = spec()
+        evaluation_spec["cases"][0]["assertions"] = [
+            {"type": "matches", "path": "value", "pattern": ".+"}
+        ]
+        runs = passing_runs()
+        for run in runs:
+            run["output"] = {"value": "ok"}
+
+        result = evaluate_agent_runs(evaluation_spec, runs)
+
+        self.assertEqual(result["gate"], "PASS")
+        detail = result["case_results"][0]["runs"][0]["assertions"][0]["detail"]
+        self.assertIn("matches", detail)
+        self.assertNotIn("does not match", detail)
+
     def test_one_high_risk_failure_is_not_averaged_away(self) -> None:
         runs = passing_runs()
         runs[1]["output"]["price"] = 11.0
