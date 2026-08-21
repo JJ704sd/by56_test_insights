@@ -13,10 +13,10 @@ Three required inputs and one per-run row:
 
 | Input kind    | Where it is consumed                                       | Validator                  | Schema file                                            |
 |---------------|------------------------------------------------------------|----------------------------|--------------------------------------------------------|
-| `manifest`    | `validate_change_risks`, `decide_release_gate`             | `validate_manifest`        | [`manifest.schema.json`](./manifest.schema.json)       |
-| `catalog`     | `select_regression_scope`, `decide_release_gate`           | `validate_catalog`         | [`catalog.schema.json`](./catalog.schema.json)         |
-| `agent_spec`  | `evaluate_agent_evidence`, `decide_release_gate`           | `validate_agent_spec`      | [`agent_spec.schema.json`](./agent_spec.schema.json)   |
-| `agent_run`   | JSONL rows for `evaluate_agent_evidence`                   | `validate_agent_run`       | [`agent_run.schema.json`](./agent_run.schema.json)     |
+| `manifest`    | `validate_change_risks`, `decide_release_gate`             | `validate_manifest`        | [`manifest.schema.json`](../../../src/qualityctl/schemas/v1/manifest.schema.json)       |
+| `catalog`     | `select_regression_scope`, `decide_release_gate`           | `validate_catalog`         | [`catalog.schema.json`](../../../src/qualityctl/schemas/v1/catalog.schema.json)         |
+| `agent_spec`  | `evaluate_agent_evidence`, `decide_release_gate`           | `validate_agent_spec`      | [`agent_spec.schema.json`](../../../src/qualityctl/schemas/v1/agent_spec.schema.json)   |
+| `agent_run`   | JSONL rows for `evaluate_agent_evidence`                   | `validate_agent_run`       | [`agent_run.schema.json`](../../../src/qualityctl/schemas/v1/agent_run.schema.json)     |
 
 ## Layering: structural vs semantic vs compatibility
 

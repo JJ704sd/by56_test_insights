@@ -356,6 +356,30 @@ class McpBoundaryTests(unittest.TestCase):
             evaluate_agent_evidence(spec, runs)
         self.assertIn("regex", str(ctx.exception))
 
+    def test_evaluate_agent_evidence_rejects_regex_quantifier_overflow(self) -> None:
+        spec = load_json(EXAMPLES / "agent-cases.json")
+        spec["cases"][0]["assertions"] = [
+            {
+                "type": "matches",
+                "path": "value",
+                "pattern": "a{" + "9" * 250 + "}",
+            }
+        ]
+
+        with self.assertRaises(ToolError) as ctx:
+            evaluate_agent_evidence(spec, load_jsonl(EXAMPLES / "agent-runs.jsonl"))
+
+        self.assertIn("regex", str(ctx.exception))
+
+    def test_evaluate_agent_evidence_rejects_boolean_strings(self) -> None:
+        spec = load_json(EXAMPLES / "agent-cases.json")
+        spec["cases"][2]["semantic_review_required"] = "true"
+
+        with self.assertRaises(ToolError) as ctx:
+            evaluate_agent_evidence(spec, load_jsonl(EXAMPLES / "agent-runs.jsonl"))
+
+        self.assertIn("semantic_review_required", str(ctx.exception))
+
     def test_decide_release_gate_rejects_bad_catalog(self) -> None:
         manifest = load_json(EXAMPLES / "risk-manifest.json")
         with self.assertRaises(ToolError) as ctx:

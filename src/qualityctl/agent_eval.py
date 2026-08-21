@@ -134,6 +134,8 @@ def _judge_assertion(output: Any, assertion: Mapping[str, Any]) -> tuple[bool, s
                 f"{MAX_REGEX_MATCH_LENGTH} characters"
             )
         matched = isinstance(actual, str) and re.search(pattern, actual) is not None
+        if matched:
+            return True, f"{path}: value {actual!r} matches {pattern!r}"
         return matched, f"{path}: value {actual!r} does not match {pattern!r}"
     if kind == "number":
         expected = assertion.get("expected")

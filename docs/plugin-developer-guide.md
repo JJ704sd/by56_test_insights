@@ -241,24 +241,24 @@ LLM Judge 只能作为带来源的语义证据，不能冒充人工复核，也�
 - approval、owner 和 source ref 仍是声明式字段，没有连接可信策略注册中心或数字签名；
 - MCP 工具入参仍以 `dict[str, Any]` 暴露，但**结构层已由 Pydantic v2 + JSON Schema 收紧**（见 `docs/schemas/v1/README.md`）；未知字段、缺 `schema_version`、非法枚举值、缺必填字段、缺结构化 `manual_review` 等都会被工具边界显式拒绝并进入 model-visible `content`；
 - 没有测试环境编排、UI 自动执行、生产发布、自动修复或远程审计服务；
-- CI 仅覆盖 Python 单元 + MCP stdio smoke；Linux / macOS 与企业网络下的契约测试仍属后续工作。
+- CI 覆盖 Python 3.10/3.11 下的 Ruff、单元测试、MCP stdio、P1 evidence 与 Embedded UI smoke；Linux / macOS 与企业网络下的契约测试仍属后续工作。
 
 产品化优先级建议（Round 1 已落 §1 与 §4；其余待办）：
 
 1. ~~使用 Pydantic 模型和版本化 JSON Schema 收紧 MCP 输入~~ — **Round 1 完成**：`qualityctl.validation` + `qualityctl/schemas/v1/`，工具边界 `ToolError`，CLI 退出码 2；
 2. 接入只读策略注册中心，验证 Agent 适用性、阈值和 ROI policy 的审批摘要；
 3. 将 MCP 部署为带认证、授权、审计和规则版本的 Streamable HTTP 服务；
-4. 完成 8 周影子试点，证明净收益和风险发现效果后再接 CI 硬门禁 — **Round 2 未启动**：`R2-G0` 尚未满足；当前仅有 [P0 试点脚手架](round-2-pilot/README.md)。Round 1 的最小 CI 基线仍由 `.github/workflows/python-qualityctl.yml` 提供（windows-latest + Python 3.11 + pip cache + unittest + MCP smoke；action SHA 已 pin）；
+4. 完成 8 周影子试点，证明净收益和风险发现效果后再接 CI 硬门禁 — **Round 2 未启动**：`R2-G0` 尚未满足；当前仅有 [P0 试点脚手架](round-2-pilot/README.md)。Round 1 的最小 CI 基线仍由 `.github/workflows/python-qualityctl.yml` 提供（windows-latest + Python 3.10/3.11 + pip cache + Ruff + unittest + 三组 smoke；action SHA 已 pin）；
 5. 最后再扩展执行器和平台 adapter，避免先做大而全的自动化平台。
 
 ### Round 1 落地说明
 
-- 新增 `src/qualityctl/validation.py` 与 `src/qualityctl/schemas/v1/`；详见 [`docs/schemas/v1/README.md`](../schemas/v1/README.md)。
+- 新增 `src/qualityctl/validation.py` 与 `src/qualityctl/schemas/v1/`；详见 [`docs/schemas/v1/README.md`](schemas/v1/README.md)。
 - `mcp_server.py` 在每个工具入口处先调 `validation.*`，结构失败抛 `ToolError`，MCP 返回 `CallToolResult(is_error=true, content=[TextContent(<JSON>)])`，LLM 可直接看到错误。
 - `cli.py` 在每个子命令入口显式校验，stderr 输出 `{"ok":false,"command":"...","kind":"structural_validation","input":"...","errors":[...]}`，退出码 `2`。
 - 测试夹具更新：`tests/test_risk.py / test_selection.py / test_gate.py / test_agent_eval.py` 中所有手写 manifest/catalog/spec 已带 `"schema_version":"1.0"`。
 - 兼容策略：`schema_version` 字段值在结构层不再白名单，未知值（如 `"2.0"`）仍能通过结构校验；major 版本兼容性由 `embedded_ui/view_model.py` 的 `compatibility.status` 单独识别，仍走"原始 gate=PASS、release_basis_status=NOT_VERIFIED、effective_release_allowed=false"的失败关闭路径。
-- 变更摘要见 [`docs/changelog-round-1.md`](../changelog-round-1.md)。
+- 变更摘要见 [`docs/changelog-round-1.md`](changelog-round-1.md)。
 
 ## 11. 维护红线
 
